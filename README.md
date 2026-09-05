@@ -7,7 +7,7 @@ Personal baseball edge toolkit for Android. Kotlin + Jetpack Compose, Material 3
 ## Screens
 
 - **Home** — four entries plus Models / Settings
-- **Projected Starters** — today’s actual MLB probable SPs (America/Los_Angeles slate), ranked PROG → STABLE → REG by a documented outlook model
+- **Projected Starters** — MLB probable SPs for a picked date (America/Los_Angeles). ◀ / Today / ▶ plus calendar. Future/today = live slate; past days = reconstructed prediction vs actual Ks/K%
 - **Daily HR Probability** — batters ranked by game HR% with park / weather / pitcher chips
 - **DFS Lineups** — five swipeable FanDuel-style lineups (Cash core, NYY stack, LAD stack, Leverage, Contrarian)
 - **Underdog Props** — Higher/Lower edges (model prob − implied)
@@ -52,14 +52,15 @@ Install on a connected device or emulator:
 
 ## Live data: Projected Starters
 
-**Today** is `LocalDate.now(America/Los_Angeles)`.
+**Today / yesterday / tomorrow** use `America/Los_Angeles`. Date range: March 1 of the season through today + 14 days.
 
 | Need | Source |
 | --- | --- |
 | Probable SPs, matchup, venue, weather, first pitch | [MLB Stats API](https://statsapi.mlb.com) `GET /api/v1/schedule?sportId=1&date=YYYY-MM-DD&hydrate=probablePitcher,venue,weather` |
 | Team abbreviations | `GET /api/v1/teams?sportId=1` |
 | Season K% / BF / GS / strike% | `GET /api/v1/people/{id}/stats?stats=season,gameLog&group=pitching&season=YYYY` |
-| Recent form | Last **5** `gamesStarted` rows from that game log |
+| Recent form | Last **5** `gamesStarted` rows **before the slate date** (reconstructed as-of) |
+| Actual start + SO/BF (past days) | `GET /api/v1/game/{gamePk}/boxscore` first pitcher per side; game-log fallback |
 
 **Outlook (see `OutlookCalculator.kt`)**
 
@@ -68,6 +69,8 @@ Install on a connected device or emulator:
 - `nextStartKs ≈ projK × expectedBF` (season BF/GS, else last start, else 26).
 - `outlookScore = round((projK − 22.5%)×100 + (recentK − seasonK)×180)` → **PROG ≥ +5**, **REG ≤ −5**, else **STABLE**.
 - Rank by outlook score, then proj K%.
+
+**Pred vs actual (past dates):** we do not persist live cards. Outlook is **reconstructed** from game logs with `date < slate` (as of that morning), then compared to the boxscore starter’s SO/BF. Δ = actual − predicted (Ks and K%). Postponed/canceled games are omitted. If MLB has not posted tomorrow’s probables, the empty state says so — no fake SPs.
 
 Network or parse failure shows an error/empty state with **Retry**. The old Cole/Skubal mock list is **not** used as a silent fallback.
 

@@ -23,11 +23,17 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
+enum class SlateMode { LIVE, RESULTS }
+
 data class StartersBoard(
     val slateDate: LocalDate,
     val fetchedAt: Instant,
     val starters: List<Starter>,
-    val sourceLabel: String = "Live · MLB",
+    val mode: SlateMode,
+    val sourceLabel: String,
+    val reconstructed: Boolean,
+    val postponedCount: Int = 0,
+    val emptyReason: String? = null,
 )
 
 class StartersLoadException(message: String, cause: Throwable? = null) : Exception(message, cause)
@@ -36,35 +42,65 @@ class StartersRepository(
     private val api: MlbStatsClient = MlbStatsClient(),
     private val zone: ZoneId = SLATE_ZONE,
 ) {
-    suspend fun loadToday(): StartersBoard = withContext(Dispatchers.IO) {
-        val slate = LocalDate.now(zone)
+    suspend fun loadToday(): StartersBoard = load(LocalDate.now(zone))
+
+    suspend fun load(slate: LocalDate): StartersBoard = withContext(Dispatchers.IO) {
+        val today = LocalDate.now(zone)
         val fetchedAt = Instant.now()
+        val resultsMode = slate.isBefore(today)
         val abbrev = runCatching { loadTeamAbbrevs() }.getOrDefault(emptyMap())
         val raw = try {
-            loadProbablePitchers(slate, abbrev)
+            loadSlatePitchers(slate, abbrev, resultsMode)
         } catch (e: Exception) {
             throw StartersLoadException(
                 "Couldn’t reach MLB Stats API for $slate. Check the connection and retry.",
                 e,
             )
         }
-        if (raw.isEmpty()) {
+        val postponed = raw.count { it.postponed }
+        val usable = raw.filter { !it.postponed }
+        if (usable.isEmpty()) {
+            val reason = when {
+                postponed > 0 ->
+                    "Every game on $slate was postponed or canceled. Flip a day to try another slate."
+                resultsMode ->
+                    "No completed starts found for $slate."
+                else ->
+                    "MLB hasn’t posted probable starters for $slate yet. Check back later, or pick another date."
+            }
             return@withContext StartersBoard(
                 slateDate = slate,
                 fetchedAt = fetchedAt,
                 starters = emptyList(),
+                mode = if (resultsMode) SlateMode.RESULTS else SlateMode.LIVE,
+                sourceLabel = if (resultsMode) "Results · pred vs actual" else "Live slate",
+                reconstructed = resultsMode,
+                postponedCount = postponed,
+                emptyReason = reason,
             )
         }
-        val season = slate.year
-        val samples = fetchSamples(raw.map { it.mlbId }, season)
-        val projected = raw.map { row ->
-            val projection = OutlookCalculator.project(samples[row.mlbId])
+        val logsById = fetchGameLogs(usable.map { it.mlbId }, slate.year)
+        val projected = usable.map { row ->
+            val sample = sampleAsOf(logsById[row.mlbId].orEmpty(), slate)
+            val projection = OutlookCalculator.project(sample)
             row to projection
         }.sortedWith(
             compareByDescending<Pair<RawStarter, OutlookCalculator.Projection>> { it.second.outlookScore }
                 .thenByDescending { it.second.projK },
         )
         val starters = projected.mapIndexed { index, (row, projection) ->
+            val predKs = projection.nextStartKs
+            val predKPct = projection.projK * 100f
+            val dayLog = logsById[row.mlbId].orEmpty().firstOrNull { log ->
+                logDate(log) == slate && (log.optObj("stat")?.optIntOrNull("gamesStarted") ?: 0) >= 1
+            }?.optObj("stat")
+            val actualKs = row.actualSo ?: dayLog?.optIntOrNull("strikeOuts")
+            val actualBf = row.actualBf ?: dayLog?.optIntOrNull("battersFaced")
+            val actualKPct = if (actualKs != null && actualBf != null && actualBf > 0) {
+                actualKs.toFloat() / actualBf * 100f
+            } else {
+                null
+            }
             Starter(
                 rank = index + 1,
                 name = row.name,
@@ -75,15 +111,29 @@ class StartersRepository(
                 tempF = row.tempF,
                 outlook = projection.outlook,
                 outlookScore = projection.outlookScore,
-                projKPct = projection.projK * 100f,
-                nextStartKs = projection.nextStartKs,
+                projKPct = predKPct,
+                nextStartKs = predKs,
                 trend = projection.trend,
                 gameTimeLabel = row.gameTimeLabel,
                 mlbId = row.mlbId,
                 homeAway = row.homeAway,
+                actualKs = actualKs,
+                actualBf = actualBf,
+                actualKPct = actualKPct,
+                ksDelta = actualKs?.let { it - predKs },
+                kPctDelta = actualKPct?.let { it - predKPct },
+                resultNote = row.resultNote,
             )
         }
-        StartersBoard(slateDate = slate, fetchedAt = fetchedAt, starters = starters)
+        StartersBoard(
+            slateDate = slate,
+            fetchedAt = fetchedAt,
+            starters = starters,
+            mode = if (resultsMode) SlateMode.RESULTS else SlateMode.LIVE,
+            sourceLabel = if (resultsMode) "Results · pred vs actual" else "Live slate",
+            reconstructed = resultsMode,
+            postponedCount = postponed,
+        )
     }
 
     private fun loadTeamAbbrevs(): Map<Int, String> {
@@ -95,15 +145,24 @@ class StartersRepository(
         }.toMap()
     }
 
-    private fun loadProbablePitchers(slate: LocalDate, abbrev: Map<Int, String>): List<RawStarter> {
-        val date = slate.toString()
+    private suspend fun loadSlatePitchers(
+        slate: LocalDate,
+        abbrev: Map<Int, String>,
+        resultsMode: Boolean,
+    ): List<RawStarter> {
         val json = api.getJson(
-            "/api/v1/schedule?sportId=1&date=$date&hydrate=probablePitcher,venue,weather",
+            "/api/v1/schedule?sportId=1&date=$slate&hydrate=probablePitcher,venue,weather",
         )
-        val dates = json.optArr("dates").toObjList()
-        val games = dates.flatMap { it.optArr("games").toObjList() }
+        val games = json.optArr("dates").toObjList().flatMap { it.optArr("games").toObjList() }
         val rows = mutableListOf<RawStarter>()
         for (game in games) {
+            val status = game.optObj("status")
+            val detailed = status?.optString("detailedState").orEmpty()
+            val abstractState = status?.optString("abstractGameState").orEmpty()
+            val postponed = detailed.contains("Postponed", ignoreCase = true) ||
+                detailed.contains("Cancelled", ignoreCase = true) ||
+                detailed.contains("Canceled", ignoreCase = true) ||
+                detailed.contains("Suspended", ignoreCase = true)
             val venue = game.optObj("venue")?.optString("name").orEmpty()
             val weatherObj = game.optObj("weather")
             val condition = weatherObj?.optString("condition").orEmpty()
@@ -116,6 +175,7 @@ class StartersRepository(
                 Weather.CLOUD
             }
             val gameTime = formatGameTime(game.optString("gameDate"))
+            val gamePk = game.optIntOrNull("gamePk")
             val teams = game.optObj("teams") ?: continue
             val home = teams.optObj("home")
             val away = teams.optObj("away")
@@ -123,10 +183,41 @@ class StartersRepository(
             val awayId = away?.optObj("team")?.optIntOrNull("id")
             val homeAbbr = homeId?.let { abbrev[it] } ?: shortName(home?.optObj("team"))
             val awayAbbr = awayId?.let { abbrev[it] } ?: shortName(away?.optObj("team"))
-            addPitcher(rows, away, awayAbbr, homeAbbr, venue, weather, temp, gameTime, "away")
-            addPitcher(rows, home, homeAbbr, awayAbbr, venue, weather, temp, gameTime, "home")
+
+            val box = if (resultsMode && !postponed && gamePk != null && abstractState == "Final") {
+                runCatching { loadBoxStarters(gamePk) }.getOrDefault(emptyMap())
+            } else {
+                emptyMap()
+            }
+
+            addPitcher(rows, away, awayAbbr, homeAbbr, venue, weather, temp, gameTime, "away", postponed, box)
+            addPitcher(rows, home, homeAbbr, awayAbbr, venue, weather, temp, gameTime, "home", postponed, box)
         }
-        return rows.distinctBy { it.mlbId to it.gameTimeLabel }
+        return rows.distinctBy { Triple(it.mlbId, it.gameTimeLabel, it.homeAway) }
+    }
+
+    private fun loadBoxStarters(gamePk: Int): Map<String, BoxStarter> {
+        val box = api.getJson("/api/v1/game/$gamePk/boxscore")
+        val teams = box.optObj("teams") ?: return emptyMap()
+        return listOf("away", "home").mapNotNull { side ->
+            val club = teams.optObj(side) ?: return@mapNotNull null
+            val ids = club.optArr("pitchers")
+            if (ids.length() == 0) return@mapNotNull null
+            val firstId = when (val raw = ids.opt(0)) {
+                is Number -> raw.toInt()
+                is String -> raw.toIntOrNull()
+                else -> null
+            } ?: return@mapNotNull null
+            val player = club.optObj("players")?.optObj("ID$firstId") ?: return@mapNotNull null
+            val pitching = player.optObj("stats")?.optObj("pitching")
+            val name = player.optObj("person")?.optString("fullName").orEmpty()
+            side to BoxStarter(
+                mlbId = firstId,
+                name = name,
+                so = pitching?.optIntOrNull("strikeOuts"),
+                bf = pitching?.optIntOrNull("battersFaced"),
+            )
+        }.toMap()
     }
 
     private fun addPitcher(
@@ -139,10 +230,21 @@ class StartersRepository(
         tempF: Int,
         gameTime: String,
         homeAway: String,
+        postponed: Boolean,
+        boxBySide: Map<String, BoxStarter>,
     ) {
-        val pitcher = side?.optObj("probablePitcher") ?: return
-        val id = pitcher.optIntOrNull("id") ?: return
-        val name = pitcher.optString("fullName").ifBlank { return }
+        val probable = side?.optObj("probablePitcher")
+        val probableId = probable?.optIntOrNull("id")
+        val probableName = probable?.optString("fullName").orEmpty()
+        val box = boxBySide[homeAway]
+        val id = box?.mlbId ?: probableId ?: return
+        val name = box?.name?.ifBlank { null } ?: probableName.ifBlank { return }
+        val note = when {
+            postponed -> "PPD"
+            box != null && probableId != null && box.mlbId != probableId ->
+                "Actual SP (probable was $probableName)"
+            else -> ""
+        }
         out += RawStarter(
             mlbId = id,
             name = name,
@@ -153,57 +255,63 @@ class StartersRepository(
             tempF = tempF,
             gameTimeLabel = gameTime,
             homeAway = homeAway,
+            postponed = postponed,
+            actualSo = if (postponed) null else box?.so,
+            actualBf = if (postponed) null else box?.bf,
+            resultNote = note,
         )
     }
 
-    private suspend fun fetchSamples(
+    private suspend fun fetchGameLogs(
         ids: List<Int>,
         season: Int,
-    ): Map<Int, OutlookCalculator.PitchingSample> = coroutineScope {
+    ): Map<Int, List<JSONObject>> = coroutineScope {
         val unique = ids.distinct()
         val gate = Semaphore(6)
         unique.map { id ->
             async {
                 gate.withPermit {
-                    id to runCatching { loadSample(id, season) }.getOrNull()
+                    id to runCatching { loadGameLogs(id, season) }.getOrDefault(emptyList())
                 }
             }
-        }.awaitAll().mapNotNull { (id, sample) -> sample?.let { id to it } }.toMap()
+        }.awaitAll().toMap()
     }
 
-    private fun loadSample(id: Int, season: Int): OutlookCalculator.PitchingSample {
+    private fun loadGameLogs(id: Int, season: Int): List<JSONObject> {
         val json = api.getJson(
             "/api/v1/people/$id/stats?stats=season,gameLog&group=pitching&season=$season",
         )
-        val blocks = json.optArr("stats").toObjList()
-        val seasonStat = blocks.firstOrNull { it.optObj("type")?.optString("displayName") == "season" }
-            ?.optArr("splits")?.toObjList()?.firstOrNull()?.optObj("stat")
-        val logs = blocks.firstOrNull { it.optObj("type")?.optString("displayName") == "gameLog" }
+        return json.optArr("stats").toObjList()
+            .firstOrNull { it.optObj("type")?.optString("displayName") == "gameLog" }
             ?.optArr("splits")?.toObjList().orEmpty()
-            .filter { it.optObj("stat")?.optIntOrNull("gamesStarted") ?: 0 >= 1 }
+    }
 
-        val seasonSo = seasonStat?.optIntOrNull("strikeOuts") ?: 0
-        val seasonBf = seasonStat?.optIntOrNull("battersFaced") ?: 0
-        val seasonGs = seasonStat?.optIntOrNull("gamesStarted") ?: 0
-        val strikePct = seasonStat?.optFloatish("strikePercentage")
-
-        val recent = logs.takeLast(RECENT_STARTS)
-        val recentSo = recent.sumOf { it.optObj("stat")?.optIntOrNull("strikeOuts") ?: 0 }
-        val recentBf = recent.sumOf { it.optObj("stat")?.optIntOrNull("battersFaced") ?: 0 }
-        val lastBf = recent.lastOrNull()?.optObj("stat")?.optIntOrNull("battersFaced")
-        val ksTrend = logs.takeLast(6).map { (it.optObj("stat")?.optIntOrNull("strikeOuts") ?: 0).toFloat() }
-
+    /** Season + last-5 GS using only appearances strictly before [slate] (reconstructed as-of). */
+    private fun sampleAsOf(logs: List<JSONObject>, slate: LocalDate): OutlookCalculator.PitchingSample? {
+        val prior = logs.filter { logDate(it)?.isBefore(slate) == true }
+        if (prior.isEmpty()) return null
+        val starts = prior.filter { it.optObj("stat")?.optIntOrNull("gamesStarted") ?: 0 >= 1 }
+        val seasonSo = prior.sumOf { it.optObj("stat")?.optIntOrNull("strikeOuts") ?: 0 }
+        val seasonBf = prior.sumOf { it.optObj("stat")?.optIntOrNull("battersFaced") ?: 0 }
+        val seasonGs = starts.size
+        val strikes = prior.sumOf { it.optObj("stat")?.optIntOrNull("strikes") ?: 0 }
+        val pitches = prior.sumOf { it.optObj("stat")?.optIntOrNull("numberOfPitches") ?: 0 }
+        val strikePct = if (pitches > 0) strikes.toFloat() / pitches else null
+        val recent = starts.takeLast(RECENT_STARTS)
         return OutlookCalculator.PitchingSample(
             seasonSo = seasonSo,
             seasonBf = seasonBf,
             seasonGs = seasonGs,
             seasonStrikePct = strikePct,
-            recentSo = recentSo,
-            recentBf = recentBf,
-            lastStartBf = lastBf,
-            lastStartKs = ksTrend,
+            recentSo = recent.sumOf { it.optObj("stat")?.optIntOrNull("strikeOuts") ?: 0 },
+            recentBf = recent.sumOf { it.optObj("stat")?.optIntOrNull("battersFaced") ?: 0 },
+            lastStartBf = recent.lastOrNull()?.optObj("stat")?.optIntOrNull("battersFaced"),
+            lastStartKs = starts.takeLast(6).map { (it.optObj("stat")?.optIntOrNull("strikeOuts") ?: 0).toFloat() },
         )
     }
+
+    private fun logDate(split: JSONObject): LocalDate? =
+        runCatching { LocalDate.parse(split.optString("date")) }.getOrNull()
 
     private fun shortName(team: JSONObject?): String {
         val name = team?.optString("name").orEmpty()
@@ -218,6 +326,13 @@ class StartersRepository(
         }.getOrDefault("")
     }
 
+    private data class BoxStarter(
+        val mlbId: Int,
+        val name: String,
+        val so: Int?,
+        val bf: Int?,
+    )
+
     private data class RawStarter(
         val mlbId: Int,
         val name: String,
@@ -228,6 +343,10 @@ class StartersRepository(
         val tempF: Int,
         val gameTimeLabel: String,
         val homeAway: String,
+        val postponed: Boolean = false,
+        val actualSo: Int? = null,
+        val actualBf: Int? = null,
+        val resultNote: String = "",
     )
 
     companion object {

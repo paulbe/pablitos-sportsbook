@@ -18,6 +18,12 @@ data class Starter(
     val gameTimeLabel: String = "",
     val mlbId: Int = 0,
     val homeAway: String = "",
+    val actualKs: Int? = null,
+    val actualBf: Int? = null,
+    val actualKPct: Float? = null,
+    val ksDelta: Float? = null,
+    val kPctDelta: Float? = null,
+    val resultNote: String = "",
 )
 
 enum class Weather { SUN, CLOUD }
