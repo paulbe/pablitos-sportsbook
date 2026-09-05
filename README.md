@@ -15,6 +15,14 @@ v1 ships four working boards on **mock/sample data** — no Statcast, FanDuel, o
 
 Regenerate / Export / Copy / Refresh / Sync / Add to slip are stubbed with toasts.
 
+## Install the debug APK on a phone
+
+The ready-to-install file is:
+
+`dist/PablitosSportsbook-debug.apk`
+
+On Android 8+: download that file, allow **Install unknown apps** for Chrome/Files if prompted, then tap **Install**.
+
 ## Open in Android Studio
 
 1. Install [Android Studio](https://developer.android.com/studio) (Koala / Ladybug or newer is fine).
