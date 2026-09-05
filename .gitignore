@@ -17,3 +17,5 @@
 *.jks
 *.keystore
 .kotlin/
+/agent-tools/
+/assets/
