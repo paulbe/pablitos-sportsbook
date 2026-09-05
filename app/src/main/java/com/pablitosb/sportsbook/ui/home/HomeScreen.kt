@@ -26,6 +26,7 @@ import androidx.compose.material.icons.outlined.GpsFixed
 import androidx.compose.material.icons.outlined.Leaderboard
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.SportsBaseball
 import androidx.compose.material.icons.outlined.Sports
 import androidx.compose.material3.Icon
@@ -122,6 +123,13 @@ fun HomeScreen(onOpen: (Dest) -> Unit) {
                 title = "Underdog Props",
                 subtitle = "Model board · import lines for edge",
                 onClick = { onOpen(Dest.Props) },
+            )
+            Spacer(Modifier.height(12.dp))
+            HomeTile(
+                icon = Icons.Outlined.EmojiEvents,
+                title = "Today’s Top Picks",
+                subtitle = "Best Ks, HRs, and FD value · today",
+                onClick = { onOpen(Dest.TopPicks) },
             )
         }
         HomeFooter(

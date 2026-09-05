@@ -13,6 +13,7 @@ import com.pablitosb.sportsbook.ui.models.ModelsScreen
 import com.pablitosb.sportsbook.ui.props.UnderdogPropsScreen
 import com.pablitosb.sportsbook.ui.settings.SettingsScreen
 import com.pablitosb.sportsbook.ui.starters.StartersScreen
+import com.pablitosb.sportsbook.ui.toppicks.TopPicksScreen
 
 enum class Dest(val route: String) {
     Home("home"),
@@ -21,6 +22,7 @@ enum class Dest(val route: String) {
     Dfs("dfs"),
     FdProj("fdproj"),
     Props("props"),
+    TopPicks("toppicks"),
     Models("models"),
     Settings("settings"),
 }
@@ -42,6 +44,7 @@ fun AppNav(modifier: Modifier = Modifier) {
         composable(Dest.Dfs.route) { DfsLineupsScreen(onBack = back) }
         composable(Dest.FdProj.route) { FdProjScreen(onBack = back) }
         composable(Dest.Props.route) { UnderdogPropsScreen(onBack = back) }
+        composable(Dest.TopPicks.route) { TopPicksScreen(onBack = back) }
         composable(Dest.Models.route) { ModelsScreen(onBack = back) }
         composable(Dest.Settings.route) { SettingsScreen(onBack = back) }
     }

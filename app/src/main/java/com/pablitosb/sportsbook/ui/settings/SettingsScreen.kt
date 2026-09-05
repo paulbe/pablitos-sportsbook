@@ -37,7 +37,8 @@ fun SettingsScreen(onBack: () -> Unit) {
         "FanDuel salaries" to "EXAMPLE formula / import / Sample CSV — not live FD",
         "Underdog lines" to "Model board / import — not live UD",
         "FD DFS Projections" to "Live MLB → FanDuel pts · EXAMPLE salaries unless imported",
-        "Version" to "1.10.0 (v0.1.10-debug)",
+        "Today’s Top Picks" to "Live top 5 K / HR / FD value from existing boards",
+        "Version" to "1.11.0 (v0.1.11-debug)",
     )
     Column(
         modifier = Modifier

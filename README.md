@@ -1,8 +1,8 @@
 # Pablito’s Sportsbook
 
 Android app for **today’s MLB slate** — live projected starters, daily HR probability,
-FanDuel classic DFS lineups, a **FanDuel DFS projections board**, and an Underdog-style
-props board. Dark navy + green.
+FanDuel classic DFS lineups, a **FanDuel DFS projections board**, an Underdog-style
+props board, and **Today’s Top Picks**. Dark navy + green.
 
 ## Home
 
@@ -11,8 +11,22 @@ props board. Dark navy + green.
 3. **DFS Lineups** — FanDuel classic $35k optimizer
 4. **FD DFS Projections** — ranked FanDuel-pts board for a chosen slate
 5. **Underdog Props** — model board + import
+6. **Today’s Top Picks** — best Ks, HRs, and FD value from the live boards
 
 Footer: **Models** · **Settings**.
+
+## Option 6 — Today’s Top Picks
+
+A daily digest (not a new model). Default date is **America/Los_Angeles** today.
+
+| Section | How it’s chosen |
+| --- | --- |
+| **Top SP K spots** | Live Projected Starters, rain last, then **Proj Ks**, then outlook |
+| **Top HR spots** | Daily HR Probability, ranked by **game HR%** |
+| **Top FD value** | FD DFS Projections: **pts/$1k** when salary exists, else Proj FD pts |
+
+Each pick includes a short **Why** line (outlook + weather boost / park PF / matchup).
+Date nav matches the other boards. Empty slate → Retry, not mock names.
 
 ## Option 5 — FD DFS Projections
 
@@ -67,6 +81,7 @@ The bundled EXAMPLE file uses the same schema.
 - Ceiling is a local uplift, not a Statcast-derived ceiling.
 - FanDuel fixture-lists require login (401 without cookies).
 - Timezone for “today”: **America/Los_Angeles**.
+- Top Picks FD value uses EXAMPLE salaries (same as Option 5) unless a CSV was imported there.
 
 ## Option 1 weather (unchanged)
 
