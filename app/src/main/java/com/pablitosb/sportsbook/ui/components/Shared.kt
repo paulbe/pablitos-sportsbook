@@ -19,8 +19,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ShowChart
 import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.ShowChart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -143,7 +143,7 @@ fun ScreenTopBar(
     modifier: Modifier = Modifier,
     trailing: @Composable RowScope.() -> Unit = {
         Icon(
-            imageVector = Icons.Outlined.ShowChart,
+            imageVector = Icons.AutoMirrored.Outlined.ShowChart,
             contentDescription = null,
             tint = AccentGreen,
             modifier = Modifier.size(22.dp),

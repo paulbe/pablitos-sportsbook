@@ -51,7 +51,6 @@ import com.pablitosb.sportsbook.data.model.UnderdogProp
 import com.pablitosb.sportsbook.theme.AccentGreen
 import com.pablitosb.sportsbook.theme.CardFill
 import com.pablitosb.sportsbook.theme.CardStroke
-import com.pablitosb.sportsbook.theme.ChipFill
 import com.pablitosb.sportsbook.theme.NavyBlack
 import com.pablitosb.sportsbook.theme.NavySurface
 import com.pablitosb.sportsbook.theme.TextMuted
@@ -69,7 +68,7 @@ fun UnderdogPropsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     var minEdge by remember { mutableStateOf(3f) }
     var selected by remember { mutableStateOf<Int?>(1) }
-    val rows = MockRepository.props.filter { it.edgePct >= minEdge || it.edgePct < 0f }.ifEmpty { MockRepository.props }
+    val rows = MockRepository.props.filter { it.edgePct >= minEdge }
     val plusEv = MockRepository.plusEvCount
     val avg = MockRepository.avgEdge
 

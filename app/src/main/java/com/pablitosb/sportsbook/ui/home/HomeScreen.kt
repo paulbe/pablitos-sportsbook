@@ -48,7 +48,6 @@ import com.pablitosb.sportsbook.theme.CardFill
 import com.pablitosb.sportsbook.theme.CardStroke
 import com.pablitosb.sportsbook.theme.NavyBlack
 import com.pablitosb.sportsbook.theme.NavySurface
-import com.pablitosb.sportsbook.theme.TextMuted
 import com.pablitosb.sportsbook.theme.TextPrimary
 import com.pablitosb.sportsbook.ui.components.BrandMark
 import com.pablitosb.sportsbook.ui.components.DateChip
