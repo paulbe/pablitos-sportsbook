@@ -1,13 +1,13 @@
 # EXAMPLE FanDuel-style salaries — NOT live FanDuel prices.
-# Format: name,team,pos,salary,proj,mlbId
-# The optimizer also builds EXAMPLE salaries from today's live MLB projections automatically.
-# Import this file or paste your own slate to override.
+# Same schema as Sample CSV: name,team,pos,salary,proj,mlbId
+# Required: name, team, pos, salary. Optional: proj, mlbId.
+# FanDuel pos: P, C, 1B, 2B, 3B, SS, OF, DH.
 name,team,pos,salary,proj,mlbId
 Tarik Skubal,DET,P,11200,33.8,669373
 Zack Wheeler,PHI,P,10400,29.2,554430
 Gerrit Cole,NYY,P,10200,31.6,543037
 Aaron Judge,NYY,OF,4500,18.8,592450
-Shohei Ohtani,LAD,OF,5600,24.8,660271
+Shohei Ohtani,LAD,DH,5600,24.8,660271
 Juan Soto,NYY,OF,3600,14.2,665742
 Kyle Schwarber,PHI,OF,3700,15.8,656941
 Yordan Alvarez,HOU,OF,4000,16.1,670541

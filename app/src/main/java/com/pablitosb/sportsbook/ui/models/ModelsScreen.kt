@@ -36,8 +36,8 @@ fun ModelsScreen(onBack: () -> Unit) {
             "Ranks today's starters PROG → REG",
         ),
         Triple("Game HR", "Talent × park × weather × pitcher × platoon", "Daily home-run probability board"),
-        Triple("DFS Optimizer", "FanDuel salary, stacks, and ownership levers", "Builds 5 Cash / GPP lineups"),
-        Triple("FD DFS Projections", "Same live FD-point pipeline, ranked board", "Sort by pts / value / salary · filter by pos"),
+        Triple("DFS Optimizer", "FanDuel salary, stacks, and ownership levers", "Builds 5 Cash / GPP lineups · Sample CSV import"),
+        Triple("FD DFS Projections", "Same live FD-point pipeline, ranked board", "Sort by pts / value / salary · Sample CSV"),
         Triple("Prop Edge", "Model win% minus Underdog implied%", "Higher / Lower edges with confidence"),
     )
     Column(

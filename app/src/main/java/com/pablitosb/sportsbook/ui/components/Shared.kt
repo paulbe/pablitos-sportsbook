@@ -434,6 +434,7 @@ fun SlateMessage(
     fetchedAt: Instant? = null,
     zone: ZoneId? = null,
     badge: String? = null,
+    extra: (@Composable () -> Unit)? = null,
 ) {
     Column(
         modifier = Modifier
@@ -453,5 +454,9 @@ fun SlateMessage(
         }
         Spacer(Modifier.height(18.dp))
         StubButton(label = "Retry", onClick = onRetry, filled = true)
+        if (extra != null) {
+            Spacer(Modifier.height(10.dp))
+            extra()
+        }
     }
 }

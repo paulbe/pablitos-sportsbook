@@ -33,6 +33,7 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.GpsFixed
 import androidx.compose.material.icons.outlined.Layers
@@ -45,7 +46,6 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pablitosb.sportsbook.data.dfs.SalarySource
+import com.pablitosb.sportsbook.data.dfs.SampleSalaryCsv
 import com.pablitosb.sportsbook.data.model.ContestType
 import com.pablitosb.sportsbook.data.model.DfsLineup
 import com.pablitosb.sportsbook.data.model.LineupKind
@@ -80,6 +81,8 @@ import com.pablitosb.sportsbook.theme.NavySurface
 import com.pablitosb.sportsbook.theme.TextMuted
 import com.pablitosb.sportsbook.theme.TextPrimary
 import com.pablitosb.sportsbook.ui.components.LiveBadge
+import com.pablitosb.sportsbook.ui.components.SalaryActionLinks
+import com.pablitosb.sportsbook.ui.components.SalaryImportDialog
 import com.pablitosb.sportsbook.ui.components.ScreenTopBar
 import com.pablitosb.sportsbook.ui.components.SlateDateNavBar
 import com.pablitosb.sportsbook.ui.components.SlateLoading
@@ -104,6 +107,10 @@ fun DfsLineupsScreen(
     var paste by remember { mutableStateOf("") }
 
     fun toast(msg: String) = Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+    fun shareSample() {
+        SampleSalaryCsv.share(context)?.let { toast(it) }
+            ?: toast("Sample CSV ready — save or open it to see the import format.")
+    }
 
     val slate = when (val state = viewModel.ui) {
         is DfsUiState.Ready -> state.board.slate.slateDate
@@ -202,48 +209,26 @@ fun DfsLineupsScreen(
             )
         }
         if (showImport) {
-            AlertDialog(
-                onDismissRequest = { showImport = false },
-                title = { Text("Import slate / salaries") },
-                text = {
-                    Column {
-                        Text(
-                            "Paste CSV: name,team,pos,salary[,proj][,mlbId]. These replace EXAMPLE prices. Not a live FanDuel feed.",
-                            color = TextMuted,
-                            fontSize = 13.sp,
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = paste,
-                            onValueChange = { paste = it },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(160.dp),
-                            placeholder = { Text("Aaron Judge,NYY,OF,4500") },
-                        )
+            SalaryImportDialog(
+                title = "Import slate / salaries",
+                paste = paste,
+                onPasteChange = { paste = it },
+                onDismiss = { showImport = false },
+                onLoadPaste = {
+                    if (paste.isBlank()) {
+                        toast("Paste a CSV first, tap Sample CSV, or load the EXAMPLE file.")
+                    } else {
+                        viewModel.applyImport(paste)
+                        showImport = false
+                        toast("Imported salaries — optimizer will use this slate.")
                     }
                 },
-                confirmButton = {
-                    TextButton(onClick = {
-                        if (paste.isBlank()) {
-                            toast("Paste a CSV first, or load the EXAMPLE file.")
-                        } else {
-                            viewModel.applyImport(paste)
-                            showImport = false
-                            toast("Imported salaries — optimizer will use this slate.")
-                        }
-                    }) { Text("Load paste", color = AccentGreen) }
+                onLoadExample = {
+                    viewModel.loadExampleFile()
+                    showImport = false
+                    toast("Loaded EXAMPLE file salaries — not live FanDuel.")
                 },
-                dismissButton = {
-                    Row {
-                        TextButton(onClick = {
-                            viewModel.loadExampleFile()
-                            showImport = false
-                            toast("Loaded EXAMPLE file salaries — not live FanDuel.")
-                        }) { Text("EXAMPLE file", color = AccentGreen) }
-                        TextButton(onClick = { showImport = false }) { Text("Cancel", color = TextMuted) }
-                    }
-                },
+                onShareSample = { shareSample() },
             )
         }
         PullToRefreshBox(
@@ -257,6 +242,12 @@ fun DfsLineupsScreen(
                     title = "DFS slate unavailable",
                     body = state.message + " You can still import a salary CSV.",
                     onRetry = { viewModel.refresh() },
+                    extra = {
+                        SalaryActionLinks(
+                            onImport = { showImport = true },
+                            onSample = { shareSample() },
+                        )
+                    },
                 )
                 is DfsUiState.Empty -> SlateMessage(
                     title = "No lineups",
@@ -265,6 +256,12 @@ fun DfsLineupsScreen(
                     fetchedAt = state.fetchedAt,
                     zone = StartersRepository.SLATE_ZONE,
                     badge = state.sourceLabel,
+                    extra = {
+                        SalaryActionLinks(
+                            onImport = { showImport = true },
+                            onSample = { shareSample() },
+                        )
+                    },
                 )
                 is DfsUiState.Ready -> ReadyDfs(
                     state = state,
@@ -276,6 +273,7 @@ fun DfsLineupsScreen(
                     onOwn = viewModel::cycleOwn,
                     onPage = { viewModel.currentLineupIndex = it },
                     onImport = { showImport = true },
+                    onShareSample = { shareSample() },
                     onChooseSlate = { showSlates = true },
                     onClearImport = {
                         viewModel.clearImport()
@@ -347,6 +345,7 @@ private fun ReadyDfs(
     onOwn: () -> Unit,
     onPage: (Int) -> Unit,
     onImport: () -> Unit,
+    onShareSample: () -> Unit,
     onChooseSlate: () -> Unit,
     onClearImport: () -> Unit,
 ) {
@@ -395,17 +394,31 @@ private fun ReadyDfs(
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StubButton(
+                label = "Import $",
+                onClick = onImport,
+                modifier = Modifier.weight(1f),
+                leading = { Icon(Icons.Outlined.FileUpload, null, tint = AccentGreen, modifier = Modifier.size(16.dp)) },
+            )
+            StubButton(
+                label = "Sample CSV",
+                onClick = onShareSample,
+                modifier = Modifier.weight(1f),
+                leading = { Icon(Icons.Outlined.Download, null, tint = AccentGreen, modifier = Modifier.size(16.dp)) },
+            )
+        }
+        if (board.salarySource != SalarySource.EXAMPLE_FORMULA) {
+            Spacer(Modifier.height(4.dp))
+            Text("Use formula salaries", color = TextMuted, fontSize = 12.sp, modifier = Modifier.clickable(onClick = onClearImport))
+        }
+        Spacer(Modifier.height(6.dp))
         Text(board.fdApiNote, color = TextMuted, fontSize = 11.sp)
         Spacer(Modifier.height(4.dp))
         Text(board.salaryNote, color = TextMuted, fontSize = 12.sp)
+        Text(SampleSalaryCsv.HINT, color = TextMuted, fontSize = 11.sp, lineHeight = 14.sp)
         if (board.optimizeError != null && board.lineups.isEmpty()) {
             Text(board.optimizeError, color = TextMuted, fontSize = 12.sp)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Import slate", color = AccentGreen, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(onClick = onImport))
-            if (board.salarySource != SalarySource.EXAMPLE_FORMULA) {
-                Text("Use formula", color = TextMuted, fontSize = 12.sp, modifier = Modifier.clickable(onClick = onClearImport))
-            }
         }
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

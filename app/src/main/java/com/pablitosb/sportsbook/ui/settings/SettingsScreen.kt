@@ -34,10 +34,10 @@ fun SettingsScreen(onBack: () -> Unit) {
         "MLB feed" to "statsapi.mlb.com — starters, HR, DFS proj, props model",
         "Savant xwOBA" to "Public expected-stats CSV · missing row shows —",
         "Park weather" to "Open-Meteo + multi-year HR park factor (same as Daily HR)",
-        "FanDuel salaries" to "EXAMPLE formula / import — not live FD",
+        "FanDuel salaries" to "EXAMPLE formula / import / Sample CSV — not live FD",
         "Underdog lines" to "Model board / import — not live UD",
         "FD DFS Projections" to "Live MLB → FanDuel pts · EXAMPLE salaries unless imported",
-        "Version" to "1.9.0 (v0.1.9-debug)",
+        "Version" to "1.10.0 (v0.1.10-debug)",
     )
     Column(
         modifier = Modifier

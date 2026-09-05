@@ -38,7 +38,16 @@ pipeline as DFS Lineups.
 schedule. FanDuel `GET /fixture-lists` still **401** without login — the app stays
 honest and does not invent an official FD slate.
 
-Import salaries the same way as Option 3: `name,team,pos,salary[,proj][,mlbId]`.
+Import salaries the same way as Option 3. Tap **Sample CSV** on DFS Lineups or
+FD DFS Projections to share a file with this header and five example rows:
+
+```
+name,team,pos,salary,proj,mlbId
+```
+
+Required: `name`, `team`, `pos`, `salary`. Optional: `proj`, `mlbId`.
+FanDuel pos labels: **P, C, 1B, 2B, 3B, SS, OF, DH**.
+The bundled EXAMPLE file uses the same schema.
 
 ## FanDuel scoring (classic)
 

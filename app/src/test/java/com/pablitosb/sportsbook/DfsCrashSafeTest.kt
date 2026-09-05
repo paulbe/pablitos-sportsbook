@@ -5,6 +5,7 @@ import com.pablitosb.sportsbook.data.dfs.DfsSlateKind
 import com.pablitosb.sportsbook.data.dfs.FdScoring
 import com.pablitosb.sportsbook.data.dfs.MlbSlateBuilder
 import com.pablitosb.sportsbook.data.dfs.SalarySlate
+import com.pablitosb.sportsbook.data.dfs.SampleSalaryCsv
 import com.pablitosb.sportsbook.data.dfs.SlatePlayer
 import com.pablitosb.sportsbook.data.model.ContestType
 import com.pablitosb.sportsbook.data.model.Weather
@@ -74,6 +75,25 @@ class DfsCrashSafeTest {
         val ctor = PropsViewModel::class.java.constructors.single()
         assertEquals(1, ctor.parameterCount)
         assertEquals("android.app.Application", ctor.parameterTypes[0].name)
+    }
+
+    @Test
+    fun sampleSalaryCsvMatchesImportSchema() {
+        assertEquals("name,team,pos,salary,proj,mlbId", SampleSalaryCsv.HEADER)
+        val rows = SalarySlate.parse(SampleSalaryCsv.CONTENTS)
+        assertEquals(5, rows.size)
+        assertEquals("Tarik Skubal", rows[0].name)
+        assertEquals("P", rows[0].pos)
+        assertEquals(11200, rows[0].salary)
+        assertEquals(33.8f, rows[0].proj!!, 0.01f)
+        assertEquals(669373, rows[0].mlbId)
+        val blankOptional = rows.first { it.name == "Cal Raleigh" }
+        assertEquals("C", blankOptional.pos)
+        assertEquals(3300, blankOptional.salary)
+        assertEquals(null, blankOptional.proj)
+        assertEquals(null, blankOptional.mlbId)
+        val positions = rows.map { it.pos }.toSet()
+        assertTrue(positions.containsAll(listOf("P", "OF", "C", "1B", "SS")))
     }
 
     @Test

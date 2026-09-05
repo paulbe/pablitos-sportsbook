@@ -1,5 +1,6 @@
 package com.pablitosb.sportsbook.ui.fdproj
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,6 +24,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Layers
@@ -33,7 +35,6 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -46,11 +47,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pablitosb.sportsbook.data.dfs.SalarySource
+import com.pablitosb.sportsbook.data.dfs.SampleSalaryCsv
 import com.pablitosb.sportsbook.data.fdproj.FdPosFilter
 import com.pablitosb.sportsbook.data.fdproj.FdProjRow
 import com.pablitosb.sportsbook.data.fdproj.FdProjSort
@@ -64,6 +67,8 @@ import com.pablitosb.sportsbook.theme.OpponentRed
 import com.pablitosb.sportsbook.theme.TextMuted
 import com.pablitosb.sportsbook.theme.TextPrimary
 import com.pablitosb.sportsbook.ui.components.LiveBadge
+import com.pablitosb.sportsbook.ui.components.SalaryActionLinks
+import com.pablitosb.sportsbook.ui.components.SalaryImportDialog
 import com.pablitosb.sportsbook.ui.components.ScreenTopBar
 import com.pablitosb.sportsbook.ui.components.SectionRule
 import com.pablitosb.sportsbook.ui.components.SlateDateNavBar
@@ -81,10 +86,20 @@ fun FdProjScreen(
     onBack: () -> Unit,
     viewModel: FdProjViewModel = viewModel(),
 ) {
+    val context = LocalContext.current
     var showPicker by remember { mutableStateOf(false) }
     var showSlates by remember { mutableStateOf(false) }
     var showImport by remember { mutableStateOf(false) }
     var paste by remember { mutableStateOf("") }
+
+    fun shareSample() {
+        SampleSalaryCsv.share(context)?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
+            ?: Toast.makeText(
+                context,
+                "Sample CSV ready — save or open it to see the import format.",
+                Toast.LENGTH_LONG,
+            ).show()
+    }
 
     val slate = when (val state = viewModel.ui) {
         is FdProjUiState.Ready -> state.board.slateDate
@@ -178,37 +193,21 @@ fun FdProjScreen(
             )
         }
         if (showImport) {
-            AlertDialog(
-                onDismissRequest = { showImport = false },
-                title = { Text("Import FanDuel salaries") },
-                text = {
-                    Column {
-                        Text(
-                            "CSV: name,team,pos,salary[,proj][,mlbId]. This is not a live FanDuel login.",
-                            color = TextMuted,
-                            fontSize = 12.sp,
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = paste,
-                            onValueChange = { paste = it },
-                            modifier = Modifier.fillMaxWidth().height(140.dp),
-                            label = { Text("Paste CSV") },
-                        )
-                    }
+            SalaryImportDialog(
+                title = "Import FanDuel salaries",
+                paste = paste,
+                onPasteChange = { paste = it },
+                onDismiss = { showImport = false },
+                onLoadPaste = {
+                    if (paste.isNotBlank()) viewModel.applyImport(paste)
+                    showImport = false
                 },
-                confirmButton = {
-                    TextButton(onClick = {
-                        if (paste.isNotBlank()) viewModel.applyImport(paste)
-                        showImport = false
-                    }) { Text("Import", color = AccentGreen) }
+                onLoadExample = {
+                    viewModel.loadExampleFile()
+                    showImport = false
                 },
-                dismissButton = {
-                    TextButton(onClick = {
-                        viewModel.loadExampleFile()
-                        showImport = false
-                    }) { Text("Example file", color = TextMuted) }
-                },
+                onShareSample = { shareSample() },
+                pasteConfirmLabel = "Import",
             )
         }
         PullToRefreshBox(
@@ -222,6 +221,12 @@ fun FdProjScreen(
                     title = "Projections unavailable",
                     body = state.message,
                     onRetry = { viewModel.refresh() },
+                    extra = {
+                        SalaryActionLinks(
+                            onImport = { showImport = true },
+                            onSample = { shareSample() },
+                        )
+                    },
                 )
                 is FdProjUiState.Empty -> SlateMessage(
                     title = "No slate projections",
@@ -230,12 +235,19 @@ fun FdProjScreen(
                     fetchedAt = state.fetchedAt,
                     zone = StartersRepository.SLATE_ZONE,
                     badge = state.sourceLabel,
+                    extra = {
+                        SalaryActionLinks(
+                            onImport = { showImport = true },
+                            onSample = { shareSample() },
+                        )
+                    },
                 )
                 is FdProjUiState.Ready -> ReadyBoard(
                     state = state,
                     viewModel = viewModel,
                     onChooseSlate = { showSlates = true },
                     onImport = { showImport = true },
+                    onShareSample = { shareSample() },
                 )
             }
         }
@@ -248,6 +260,7 @@ private fun ReadyBoard(
     viewModel: FdProjViewModel,
     onChooseSlate: () -> Unit,
     onImport: () -> Unit,
+    onShareSample: () -> Unit,
 ) {
     val board = state.board
     val visible = remember(board.rows, viewModel.sortKey, viewModel.sortAscending, viewModel.posFilter) {
@@ -298,11 +311,16 @@ private fun ReadyBoard(
                 StubButton(label = "Import $", onClick = onImport, leading = {
                     Icon(Icons.Outlined.FileUpload, null, tint = AccentGreen, modifier = Modifier.size(16.dp))
                 })
+                StubButton(label = "Sample CSV", onClick = onShareSample, leading = {
+                    Icon(Icons.Outlined.Download, null, tint = AccentGreen, modifier = Modifier.size(16.dp))
+                })
                 if (viewModel.importedText != null || viewModel.useExampleFile) {
                     StubButton(label = "Clear $", onClick = { viewModel.clearImport() })
                 }
             }
             Spacer(Modifier.height(8.dp))
+            Text(SampleSalaryCsv.HINT, color = TextMuted, fontSize = 11.sp, lineHeight = 14.sp)
+            Spacer(Modifier.height(4.dp))
             Text(board.salaryNote, color = AccentGreen, fontSize = 11.sp, lineHeight = 14.sp)
             Spacer(Modifier.height(10.dp))
             ChipRow(
