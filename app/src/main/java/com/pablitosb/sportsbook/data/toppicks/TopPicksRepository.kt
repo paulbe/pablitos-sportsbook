@@ -5,6 +5,7 @@ import com.pablitosb.sportsbook.data.hr.HrRepository
 import com.pablitosb.sportsbook.data.projections.SlateLoadException
 import com.pablitosb.sportsbook.data.starters.StartersLoadException
 import com.pablitosb.sportsbook.data.starters.StartersRepository
+import com.pablitosb.sportsbook.data.tb.TbSorter
 import java.time.Instant
 import java.time.LocalDate
 import kotlinx.coroutines.async
@@ -48,6 +49,9 @@ class TopPicksRepository(
         val kSpots = startersBoard?.let { TopPicksSelector.kSpots(it.starters) }.orEmpty()
         val hrSpots = hrBoard?.let { TopPicksSelector.hrSpots(it.batters) }.orEmpty()
         val (fdValue, byValue) = fdBoard?.let { TopPicksSelector.fdValue(it.rows) } ?: (emptyList<TopPick>() to false)
+        val tbSpots = hrBoard?.slate?.hitters
+            ?.let { TopPicksSelector.tbSpots(TbSorter.fromHitters(it)) }
+            .orEmpty()
 
         val source = listOfNotNull(
             startersBoard?.sourceLabel,
@@ -62,6 +66,7 @@ class TopPicksRepository(
             kSpots = kSpots,
             hrSpots = hrSpots,
             fdValue = fdValue,
+            tbSpots = tbSpots,
             fdRankedByValue = byValue,
             fdSalaryNote = fdBoard?.salaryNote.orEmpty(),
             kNote = when {
@@ -82,7 +87,13 @@ class TopPicksRepository(
                 fdValue.isEmpty() -> fdBoard?.emptyReason ?: "No FD projections for this slate."
                 else -> null
             },
-            emptyReason = if (kSpots.isEmpty() && hrSpots.isEmpty() && fdValue.isEmpty()) {
+            tbNote = when {
+                hrResult.isFailure -> hrResult.exceptionOrNull()?.message
+                    ?: "Couldn’t load total-bases projections."
+                tbSpots.isEmpty() -> hrBoard?.slate?.emptyReason ?: "No hitter TB spots posted."
+                else -> null
+            },
+            emptyReason = if (kSpots.isEmpty() && hrSpots.isEmpty() && fdValue.isEmpty() && tbSpots.isEmpty()) {
                 "No live picks for $date. MLB may not have posted the slate yet."
             } else {
                 null

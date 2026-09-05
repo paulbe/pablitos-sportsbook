@@ -2,7 +2,7 @@
 
 Android app for **today’s MLB slate** — live projected starters, daily HR probability,
 FanDuel classic DFS lineups, a **FanDuel DFS projections board**, an Underdog-style
-props board, and **Today’s Top Picks**. Dark navy + green.
+props board, **Today’s Top Picks**, and **Total Bases**. Dark navy + green.
 
 ## Home
 
@@ -11,9 +11,26 @@ props board, and **Today’s Top Picks**. Dark navy + green.
 3. **DFS Lineups** — FanDuel classic $35k optimizer
 4. **FD DFS Projections** — ranked FanDuel-pts board for a chosen slate
 5. **Underdog Props** — model board + import
-6. **Today’s Top Picks** — best Ks, HRs, and FD value from the live boards
+6. **Today’s Top Picks** — best Ks, HRs, FD value, and TB from the live boards
+7. **Total Bases** — expected TB from season hit rates × PA
 
 Footer: **Models** · **Settings**.
+
+## Option 7 — Total Bases
+
+Ranked live hitter board. Default date is **America/Los_Angeles** today.
+
+```
+TB ≈ PA × (1·1B/PA + 2·2B/PA + 3·3B/PA + 4·HR/PA)
+```
+
+Season 1B/2B/3B/HR rates come from the MLB Stats API and shrink toward league
+priors (80 PA). HR/PA uses the Daily HR `p_PA` (park × weather × pitcher HR/9 ×
+platoon). Doubles/triples get a muted tilt of those multipliers; singles stay
+nearly park-neutral. SLG proxy = (TB/PA) / (AB/PA).
+
+Sort: Proj TB · TB/PA · SLG. Today’s Top Picks includes a **Top TB** section.
+FD DFS Projections show Proj TB as a driver/column for hitters.
 
 ## Option 6 — Today’s Top Picks
 
@@ -24,6 +41,7 @@ A daily digest (not a new model). Default date is **America/Los_Angeles** today.
 | **Top SP K spots** | Live Projected Starters, rain last, then **Proj Ks**, then outlook |
 | **Top HR spots** | Daily HR Probability, ranked by **game HR%** |
 | **Top FD value** | FD DFS Projections: **pts/$1k** when salary exists, else Proj FD pts |
+| **Top TB spots** | Total Bases board, ranked by **Proj TB** |
 
 Each pick includes a short **Why** line (outlook + weather boost / park PF / matchup).
 Date nav matches the other boards. Empty slate → Retry, not mock names.
@@ -82,6 +100,7 @@ The bundled EXAMPLE file uses the same schema.
 - FanDuel fixture-lists require login (401 without cookies).
 - Timezone for “today”: **America/Los_Angeles**.
 - Top Picks FD value uses EXAMPLE salaries (same as Option 5) unless a CSV was imported there.
+- Proj TB is not Statcast xTB — season rates plus the existing park/pitcher/weather stack.
 
 ## Option 1 weather (unchanged)
 

@@ -2,6 +2,7 @@ package com.pablitosb.sportsbook.data.projections
 
 import com.pablitosb.sportsbook.data.dfs.FdScoring
 import com.pablitosb.sportsbook.data.hr.HrCalculator
+import com.pablitosb.sportsbook.data.tb.TbCalculator
 import com.pablitosb.sportsbook.data.mlb.ParkFactors
 import com.pablitosb.sportsbook.data.mlb.StatMath
 import com.pablitosb.sportsbook.data.mlb.WeatherAdj
@@ -190,6 +191,18 @@ class ProjectionService(
             val doubles = stat?.optIntOrNull("doubles") ?: 0
             val triples = stat?.optIntOrNull("triples") ?: 0
             val hrCount = sample.hr
+            val ab = stat?.optIntOrNull("atBats") ?: 0
+            val tb = TbCalculator.project(
+                TbCalculator.Sample(
+                    hits = hits,
+                    doubles = doubles,
+                    triples = triples,
+                    hr = hrCount,
+                    pa = pa,
+                    ab = ab,
+                ),
+                hr,
+            )
             val fd = FdScoring.hitterPoints(
                 hit = sample,
                 hr = hr,
@@ -230,7 +243,7 @@ class ProjectionService(
                 seasonSb = stat?.optIntOrNull("stolenBases") ?: 0,
                 seasonR = stat?.optIntOrNull("runs") ?: 0,
                 seasonRbi = stat?.optIntOrNull("rbi") ?: 0,
-                seasonAb = stat?.optIntOrNull("atBats") ?: 0,
+                seasonAb = ab,
                 avg = sample.avg,
                 slg = sample.slg,
                 expectedPa = hr.expectedPa,
@@ -244,6 +257,9 @@ class ProjectionService(
                 pitcherAdjPct = hr.pitcherAdjPct,
                 regressionLean = hr.regressionLean,
                 fdPoints = fd,
+                expectedTb = tb.expectedTb,
+                tbPerPa = tb.tbPerPa,
+                slgProxy = tb.slgProxy,
             )
         }.sortedByDescending { it.gameHrProb }
 

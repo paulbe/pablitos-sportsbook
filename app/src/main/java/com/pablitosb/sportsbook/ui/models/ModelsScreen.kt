@@ -39,7 +39,8 @@ fun ModelsScreen(onBack: () -> Unit) {
         Triple("DFS Optimizer", "FanDuel salary, stacks, and ownership levers", "Builds 5 Cash / GPP lineups · Sample CSV import"),
         Triple("FD DFS Projections", "Same live FD-point pipeline, ranked board", "Sort by pts / value / salary · Sample CSV"),
         Triple("Prop Edge", "Model win% minus Underdog implied%", "Higher / Lower edges with confidence"),
-        Triple("Today’s Top Picks", "Combines starters, HR%, and FD value", "Top 5 live spots per board · not a mock slate"),
+        Triple("Today’s Top Picks", "Combines starters, HR%, TB, and FD value", "Top 5 live spots per board · not a mock slate"),
+        Triple("Total Bases", "PA × (1·1B + 2·2B + 3·3B + 4·HR) per PA", "Season rates shrunk · park / pitcher / weather tilt"),
     )
     Column(
         modifier = Modifier

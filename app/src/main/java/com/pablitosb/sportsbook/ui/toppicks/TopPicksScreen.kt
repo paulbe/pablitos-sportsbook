@@ -174,7 +174,7 @@ private fun ReadyPicks(board: TopPicksBoard, viewModel: TopPicksViewModel) {
             Spacer(Modifier.height(10.dp))
             Text("Today’s Top Picks", color = TextPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Text(
-                "Best live spots from Projected Starters, Daily HR, and FD DFS Projections.",
+                "Best live spots from Projected Starters, Daily HR, FD value, and Total Bases.",
                 color = TextMuted,
                 fontSize = 13.sp,
             )
@@ -184,6 +184,7 @@ private fun ReadyPicks(board: TopPicksBoard, viewModel: TopPicksViewModel) {
                     TopPicksSection.ALL to "All",
                     TopPicksSection.SP_K to "SP Ks",
                     TopPicksSection.HR to "HR",
+                    TopPicksSection.TB to "TB",
                     TopPicksSection.FD_VALUE to "FD value",
                 ),
                 selected = section,
@@ -215,6 +216,18 @@ private fun ReadyPicks(board: TopPicksBoard, viewModel: TopPicksViewModel) {
                 Spacer(Modifier.height(12.dp))
             }
         }
+        if (section == TopPicksSection.ALL || section == TopPicksSection.TB) {
+            item {
+                SectionCard(
+                    title = "Top TB spots",
+                    subtitle = "Expected total bases · live rates × PA",
+                    metricLabel = "PROJ TB",
+                    picks = board.tbSpots,
+                    empty = board.tbNote,
+                )
+                Spacer(Modifier.height(12.dp))
+            }
+        }
         if (section == TopPicksSection.ALL || section == TopPicksSection.FD_VALUE) {
             item {
                 SectionCard(
@@ -237,7 +250,8 @@ private fun ReadyPicks(board: TopPicksBoard, viewModel: TopPicksViewModel) {
                 Spacer(Modifier.width(6.dp))
                 Text(
                     "K spots rank by Proj Ks (rain last) from live MLB probables. " +
-                        "HR spots are the Daily HR board. FD value uses the same FanDuel-point pipeline " +
+                        "HR spots are the Daily HR board. TB spots use expected total bases " +
+                        "(1B/2B/3B/HR rates × PA). FD value uses the same FanDuel-point pipeline " +
                         "as Option 5; salaries are EXAMPLE unless you imported a CSV there. " +
                         "Not live FanDuel prices. Timezone: America/Los_Angeles.",
                     color = AccentGreen,

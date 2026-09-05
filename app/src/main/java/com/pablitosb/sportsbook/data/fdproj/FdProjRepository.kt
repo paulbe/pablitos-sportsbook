@@ -29,7 +29,12 @@ class FdProjRepository(
                 player.isPitcher && pitcher != null ->
                     String.format(Locale.US, "%.1f Proj Ks", pitcher.nextStartKs)
                 hitter != null ->
-                    String.format(Locale.US, "%.0f%% HR", hitter.gameHrProb * 100f)
+                    String.format(
+                        Locale.US,
+                        "%.0f%% HR · %.1f TB",
+                        hitter.gameHrProb * 100f,
+                        hitter.expectedTb,
+                    )
                 else -> ""
             }
             FdProjRow(
@@ -46,6 +51,7 @@ class FdProjRepository(
                 inPostedLineup = player.inPostedLineup,
                 gameTimeLabel = game?.gameTimeLabel.orEmpty(),
                 driver = driver,
+                projTb = hitter?.expectedTb,
             )
         }
         return FdProjBoard(

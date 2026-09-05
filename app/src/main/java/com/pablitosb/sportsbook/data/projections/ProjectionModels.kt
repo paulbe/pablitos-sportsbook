@@ -71,6 +71,9 @@ data class HitterProjection(
     val pitcherAdjPct: Int,
     val regressionLean: Boolean,
     val fdPoints: Float,
+    val expectedTb: Float = 0f,
+    val tbPerPa: Float = 0f,
+    val slgProxy: Float = 0f,
 )
 
 data class PitcherProjection(

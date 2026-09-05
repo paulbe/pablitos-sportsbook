@@ -24,6 +24,7 @@ data class FdProjRow(
     val gameTimeLabel: String,
     val driver: String,
     val ownPlaceholder: String = "—",
+    val projTb: Float? = null,
 )
 
 data class FdProjBoard(

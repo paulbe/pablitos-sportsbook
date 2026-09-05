@@ -6,11 +6,12 @@ import com.pablitosb.sportsbook.data.model.HrBatter
 import com.pablitosb.sportsbook.data.model.Starter
 import com.pablitosb.sportsbook.data.model.WxTag
 import com.pablitosb.sportsbook.data.starters.ParkWeather
+import com.pablitosb.sportsbook.data.tb.TbBatter
 import java.time.Instant
 import java.time.LocalDate
 import java.util.Locale
 
-enum class TopPicksSection { ALL, SP_K, HR, FD_VALUE }
+enum class TopPicksSection { ALL, SP_K, HR, FD_VALUE, TB }
 
 data class TopPick(
     val mlbId: Int,
@@ -31,14 +32,17 @@ data class TopPicksBoard(
     val kSpots: List<TopPick>,
     val hrSpots: List<TopPick>,
     val fdValue: List<TopPick>,
+    val tbSpots: List<TopPick>,
     val fdRankedByValue: Boolean,
     val fdSalaryNote: String,
     val kNote: String? = null,
     val hrNote: String? = null,
     val fdNote: String? = null,
+    val tbNote: String? = null,
     val emptyReason: String? = null,
 ) {
-    val hasAny: Boolean get() = kSpots.isNotEmpty() || hrSpots.isNotEmpty() || fdValue.isNotEmpty()
+    val hasAny: Boolean
+        get() = kSpots.isNotEmpty() || hrSpots.isNotEmpty() || fdValue.isNotEmpty() || tbSpots.isNotEmpty()
 }
 
 object TopPicksSelector {
@@ -112,6 +116,34 @@ object TopPicksSelector {
             )
         }
         return picks to hasValue
+    }
+
+    fun tbSpots(batters: List<TbBatter>, limit: Int = LIMIT): List<TopPick> {
+        return batters
+            .sortedByDescending { it.projTb }
+            .take(limit)
+            .mapIndexed { index, b ->
+                TopPick(
+                    mlbId = if (b.mlbId != 0) b.mlbId else b.name.hashCode() + index,
+                    name = b.name,
+                    team = b.team,
+                    opponent = b.opponent,
+                    pos = b.pos,
+                    metric = String.format(Locale.US, "%.2f", b.projTb),
+                    metricValue = b.projTb,
+                    why = whyTb(b),
+                    gameTimeLabel = "",
+                )
+            }
+    }
+
+    fun whyTb(b: TbBatter): String {
+        val parts = mutableListOf(String.format(Locale.US, "%.2f Proj TB", b.projTb))
+        parts += String.format(Locale.US, "%.3f TB/PA", b.tbPerPa)
+        if (b.parkAdjPct != 0) parts += String.format(Locale.US, "park %+d%%", b.parkAdjPct)
+        if (b.pitcherName.isNotBlank()) parts += "vs ${b.pitcherName}"
+        if (b.parkName.isNotBlank()) parts += b.parkName
+        return parts.joinToString(" · ")
     }
 
     fun whyK(s: Starter): String {

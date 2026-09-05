@@ -459,6 +459,7 @@ private fun ProjRow(rank: Int, row: FdProjRow) {
             Meta("SAL", "$${row.salary}")
             Meta("VAL", row.value?.let { String.format(Locale.US, "%.2f", it) } ?: "—")
             Meta("CEIL", String.format(Locale.US, "%.1f", row.ceiling))
+            Meta("TB", row.projTb?.let { String.format(Locale.US, "%.1f", it) } ?: "—")
             Meta("OWN", row.ownPlaceholder)
         }
     }
