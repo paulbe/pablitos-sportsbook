@@ -18,9 +18,11 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -64,8 +66,11 @@ import com.pablitosb.sportsbook.data.model.Starter
 import com.pablitosb.sportsbook.data.model.Weather
 import com.pablitosb.sportsbook.data.model.WindRel
 import com.pablitosb.sportsbook.data.model.WxTag
+import com.pablitosb.sportsbook.data.starters.ParkWeather
 import com.pablitosb.sportsbook.data.starters.SlateMode
 import com.pablitosb.sportsbook.data.starters.StartersRepository
+import com.pablitosb.sportsbook.data.starters.StartersSort
+import com.pablitosb.sportsbook.data.starters.StartersSorter
 import com.pablitosb.sportsbook.theme.AccentGreen
 import com.pablitosb.sportsbook.theme.CardStroke
 import com.pablitosb.sportsbook.theme.HrWeatherOrange
@@ -175,7 +180,7 @@ fun StartersScreen(
                     fetchedAt = state.fetchedAt,
                     badge = state.sourceLabel,
                 )
-                is StartersUiState.Ready -> ReadyList(state)
+                is StartersUiState.Ready -> ReadyList(state, viewModel)
             }
         }
     }
@@ -239,9 +244,12 @@ private fun DateNavBar(
 }
 
 @Composable
-private fun ReadyList(state: StartersUiState.Ready) {
+private fun ReadyList(state: StartersUiState.Ready, viewModel: StartersViewModel) {
     val board = state.board
     val results = board.mode == SlateMode.RESULTS
+    val sorted = remember(board.starters, viewModel.sortKey, viewModel.sortAscending) {
+        StartersSorter.sort(board.starters, viewModel.sortKey, viewModel.sortAscending)
+    }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -269,11 +277,7 @@ private fun ReadyList(state: StartersUiState.Ready) {
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                if (results) {
-                    "Outlook reconstructed as of slate morning · ranked by pred score"
-                } else {
-                    "Ranked by progression → regression outlook"
-                },
+                sortCaption(results, viewModel.sortKey, viewModel.sortAscending),
                 color = TextMuted,
                 fontSize = 13.sp,
             )
@@ -285,11 +289,17 @@ private fun ReadyList(state: StartersUiState.Ready) {
                 )
             }
             Spacer(Modifier.height(10.dp))
+            SortChipRow(
+                selected = viewModel.sortKey,
+                ascending = viewModel.sortAscending,
+                onSelect = { viewModel.selectSort(it) },
+            )
+            Spacer(Modifier.height(8.dp))
             OutlookDots()
             Spacer(Modifier.height(12.dp))
         }
-        items(board.starters, key = { "${it.mlbId}-${it.rank}-${it.homeAway}" }) { starter ->
-            StarterRow(starter, results)
+        itemsIndexed(sorted, key = { _, it -> "${it.mlbId}-${it.homeAway}-${it.gameTimeLabel}" }) { index, starter ->
+            StarterRow(starter, results, index + 1)
             SectionRule()
         }
         item {
@@ -314,11 +324,9 @@ private fun ReadyList(state: StartersUiState.Ready) {
                         "Actual Ks / K% come from the boxscore starter (SO/BF). Δ = actual − predicted."
                 } else {
                     "Outlook = quality (proj K% vs 22.5% lg) + last-5-GS vs season K% trajectory. " +
-                        "Proj K% blends recent K%, season K%, and strike%. Proj Ks ≈ proj K% × expected BF. " +
-                        "Wind/temp/precip are Open-Meteo at the park lat/long for first pitch, rotated by " +
-                        "MLB CF azimuth. Tags also use the same multi-year HR park factor as the Daily HR board " +
-                        "(Coors 1.28, Petco 0.90). Rain risk ignores PF. Domes / closed roofs ignore outdoor wind. " +
-                        "Fetch failure is Neutral / —. Use ◀ ▶ or the date chip to jump days."
+                        "Proj Ks ≈ proj K% × expected BF. Boost % = HR park factor + park-relative wind + temp " +
+                        "(+ = hitter-friendly). Rain is a large negative, not a K boost. Tap a sort chip again to flip " +
+                        "direction. Use ◀ ▶ or the date chip to jump days."
                 },
                 color = AccentGreen,
                 fontSize = 11.sp,
@@ -326,6 +334,75 @@ private fun ReadyList(state: StartersUiState.Ready) {
             )
             Spacer(Modifier.height(24.dp))
         }
+    }
+}
+
+@Composable
+private fun SortChipRow(
+    selected: StartersSort,
+    ascending: Boolean,
+    onSelect: (StartersSort) -> Unit,
+) {
+    val arrow = if (ascending) "↑" else "↓"
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("SORT", color = TextMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        sortChips().forEach { (key, label) ->
+            val on = key == selected
+            Box(
+                modifier = Modifier
+                    .background(
+                        if (on) AccentGreen.copy(alpha = 0.16f) else NavySurface,
+                        RoundedCornerShape(16.dp),
+                    )
+                    .border(
+                        1.dp,
+                        if (on) AccentGreen.copy(alpha = 0.7f) else CardStroke,
+                        RoundedCornerShape(16.dp),
+                    )
+                    .clickable { onSelect(key) }
+                    .padding(horizontal = 9.dp, vertical = 5.dp),
+            ) {
+                Text(
+                    text = if (on) "$label $arrow" else label,
+                    color = if (on) AccentGreen else TextMuted,
+                    fontSize = 11.sp,
+                    fontWeight = if (on) FontWeight.SemiBold else FontWeight.Medium,
+                )
+            }
+        }
+    }
+}
+
+private fun sortChips(): List<Pair<StartersSort, String>> = listOf(
+    StartersSort.PROG to "Prog",
+    StartersSort.PROJ_KS to "Proj Ks",
+    StartersSort.XWOBA to "xwOBA",
+    StartersSort.BOOST to "Boost",
+    StartersSort.TIME to "Time",
+)
+
+private fun sortCaption(results: Boolean, key: StartersSort, ascending: Boolean): String {
+    val dir = if (ascending) "low → high" else "high → low"
+    return when (key) {
+        StartersSort.PROG ->
+            if (results) "Sorted by reconstructed outlook ($dir)"
+            else "Sorted by progression → regression ($dir)"
+        StartersSort.PROJ_KS -> "Sorted by Proj Ks ($dir)"
+        StartersSort.XWOBA ->
+            if (ascending) "Sorted by xwOBA · lower is better · missing last"
+            else "Sorted by xwOBA · higher first · missing last"
+        StartersSort.BOOST ->
+            if (ascending) "Sorted by weather/park boost · pitcher-friendly first · rain last"
+            else "Sorted by weather/park boost · hitter-friendly first · rain last"
+        StartersSort.TIME ->
+            if (ascending) "Sorted by first pitch · earliest first"
+            else "Sorted by first pitch · latest first"
     }
 }
 
@@ -448,7 +525,7 @@ private fun MessageBody(
 }
 
 @Composable
-private fun StarterRow(starter: Starter, results: Boolean) {
+private fun StarterRow(starter: Starter, results: Boolean, displayRank: Int = starter.rank) {
     val accent = when (starter.outlook) {
         Outlook.PROG -> AccentGreen
         Outlook.STABLE -> StableSlate
@@ -478,7 +555,7 @@ private fun StarterRow(starter: Starter, results: Boolean) {
         )
         Spacer(Modifier.width(8.dp))
         Text(
-            text = starter.rank.toString(),
+            text = displayRank.toString(),
             color = TextPrimary,
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
@@ -672,6 +749,18 @@ private fun WeatherCard(starter: Starter) {
                     fontWeight = FontWeight.Medium,
                 )
             }
+            val boostColor = when {
+                starter.wxTag == WxTag.RAIN_RISK -> RegRed
+                starter.envBoostPct > 3 -> HrWeatherOrange
+                starter.envBoostPct < -3 -> AccentGreen
+                else -> TextMuted
+            }
+            Text(
+                ParkWeather.boostLabel(starter.envBoostPct),
+                color = boostColor,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
             Spacer(Modifier.height(4.dp))
             WxTagChip(tagLabel, tagColor)
         }

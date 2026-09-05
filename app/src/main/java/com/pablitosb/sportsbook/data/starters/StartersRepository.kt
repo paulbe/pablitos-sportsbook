@@ -141,6 +141,8 @@ class StartersRepository(
                 ace = projection.outlookScore >= 8 || predKPct >= 28f,
                 hrParkFactor = row.wx.hrParkFactor,
                 parkHint = row.wx.parkHint,
+                envBoostPct = row.wx.envBoostPct,
+                gameStart = row.gameStart,
             )
         }
         StartersBoard(
@@ -211,8 +213,9 @@ class StartersRepository(
                 emptyMap()
             }
 
-            addPitcher(rows, away, awayAbbr, homeAbbr, venue, wx, gameTime, "away", postponed, box)
-            addPitcher(rows, home, homeAbbr, awayAbbr, venue, wx, gameTime, "home", postponed, box)
+            val gameStart = parseGameInstant(game.optString("gameDate"))
+            addPitcher(rows, away, awayAbbr, homeAbbr, venue, wx, gameTime, gameStart, "away", postponed, box)
+            addPitcher(rows, home, homeAbbr, awayAbbr, venue, wx, gameTime, gameStart, "home", postponed, box)
         }
         return rows.distinctBy { Triple(it.mlbId, it.gameTimeLabel, it.homeAway) }
     }
@@ -296,6 +299,7 @@ class StartersRepository(
         venue: String,
         wx: ParkWeather.Snapshot,
         gameTime: String,
+        gameStart: Instant?,
         homeAway: String,
         postponed: Boolean,
         boxBySide: Map<String, BoxStarter>,
@@ -322,6 +326,7 @@ class StartersRepository(
             tempF = wx.tempF,
             wx = wx,
             gameTimeLabel = gameTime,
+            gameStart = gameStart,
             homeAway = homeAway,
             postponed = postponed,
             actualSo = if (postponed) null else box?.so,
@@ -411,6 +416,7 @@ class StartersRepository(
         val tempF: Int,
         val wx: ParkWeather.Snapshot = ParkWeather.parse("", "", ""),
         val gameTimeLabel: String,
+        val gameStart: Instant? = null,
         val homeAway: String,
         val postponed: Boolean = false,
         val actualSo: Int? = null,

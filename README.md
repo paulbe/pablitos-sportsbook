@@ -48,7 +48,7 @@ There is **no Underdog API**. Default is a **Model board** (our lines/probs only
 ## Screens
 
 - **Home** — four entries plus Models / Settings
-- **Projected Starters** — live slate / reconstructed pred vs actual
+- **Projected Starters** — live slate / reconstructed pred vs actual; sort by Prog, Proj Ks, xwOBA, weather/park boost %, or first pitch
 - **Daily HR Probability** — ranked game HR%
 - **DFS Lineups** — five swipeable Cash/GPP lineups from the optimizer
 - **Underdog Props** — model board + optional imported lines
@@ -58,7 +58,7 @@ There is **no Underdog API**. Default is a **Model board** (our lines/probs only
 
 `dist/PablitosSportsbook-debug.apk`
 
-On Android 8+: allow **Install unknown apps**, then install. GitHub release **v0.1.7-debug** publishes the same file as `PablitosSportsbook-debug.apk`.
+On Android 8+: allow **Install unknown apps**, then install. GitHub release **v0.1.8-debug** publishes the same file as `PablitosSportsbook-debug.apk`.
 
 ## Open in Android Studio
 
@@ -98,6 +98,7 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`.
 - Park factors are a static table, not a live Statcast park feed.
 - Starters weather is **Open-Meteo** at the park lat/long for first-pitch hour, rotated by MLB CF `azimuthAngle`. MLB schedule hydrate is a backup only (often empty until near first pitch). Fetch failure → Neutral / —, never invented wind.
 - Wind tags (`ParkWeather`) blend Open-Meteo with the same multi-year **HR park factor** as Daily HR (BB-Ref / FanGraphs style, 1.00 = average). RAIN RISK is weather-only (PF never clears it). HR parks (PF ≥ 1.12, Coors 1.28) tag HR on milder out/heat; pitcher parks (PF ≤ 0.94, Petco 0.90) need a strong out or real heat. League-average thresholds stay out ≥ 6 mph or ≥ 82°F.
+- **Boost %** (starters sort + chip): `(PF−1)×100` + `±1.2×mph` (out/in) + `(temp−70)×0.45`. Indoor uses 0.25×park only. Rain is −28 plus precip extra (never a K boost) and sorts last.
 - Fixed domes are always indoor. Retractable roofs are outdoor unless MLB says the roof is closed.
 - xwOBA is season-to-date Statcast expected wOBA against (`est_woba`). Fetch failure or a missing pitcher is **—**, never a made-up number.
 - EXAMPLE DFS salaries are a transparent formula, not FanDuel.

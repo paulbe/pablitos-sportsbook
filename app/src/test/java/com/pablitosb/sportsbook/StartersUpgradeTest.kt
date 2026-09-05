@@ -1,9 +1,13 @@
 package com.pablitosb.sportsbook
 
+import com.pablitosb.sportsbook.data.model.Outlook
+import com.pablitosb.sportsbook.data.model.Starter
 import com.pablitosb.sportsbook.data.model.Weather
 import com.pablitosb.sportsbook.data.model.WindRel
 import com.pablitosb.sportsbook.data.model.WxTag
 import com.pablitosb.sportsbook.data.mlb.ParkFactors
+import com.pablitosb.sportsbook.data.starters.StartersSort
+import com.pablitosb.sportsbook.data.starters.StartersSorter
 import com.pablitosb.sportsbook.data.mlb.ParkSites
 import com.pablitosb.sportsbook.data.mlb.RoofKind
 import com.pablitosb.sportsbook.data.remote.OpenMeteoClient
@@ -351,4 +355,111 @@ class StartersUpgradeTest {
         assertEquals(3, hours[0].weatherCode)
         assertEquals(Instant.parse("2026-09-05T20:00:00Z"), hours[0].at)
     }
+
+    @Test
+    fun envBoostCoorsCalmIsStronglyPositive() {
+        val boost = ParkWeather.envBoostPct(
+            rain = false,
+            indoor = false,
+            windRel = WindRel.NONE,
+            windMph = 0,
+            tempF = 70,
+            hrParkFactor = 1.28f,
+        )
+        assertEquals(28, boost)
+        assertEquals("Boost +28%", ParkWeather.boostLabel(boost))
+    }
+
+    @Test
+    fun envBoostPetcoInWindIsNegative() {
+        val boost = ParkWeather.envBoostPct(
+            rain = false,
+            indoor = false,
+            windRel = WindRel.IN_CF,
+            windMph = 8,
+            tempF = 68,
+            hrParkFactor = 0.90f,
+        )
+        assertEquals(-21, boost)
+        assertEquals("Boost -21%", ParkWeather.boostLabel(boost))
+    }
+
+    @Test
+    fun envBoostRainIsLargeNegativeNotKBoost() {
+        val boost = ParkWeather.envBoostPct(
+            rain = true,
+            indoor = false,
+            windRel = WindRel.OUT_CF,
+            windMph = 12,
+            tempF = 88,
+            hrParkFactor = 1.28f,
+            precipPct = 70,
+        )
+        assertEquals(-39, boost)
+        assertTrue(boost <= -20)
+    }
+
+    @Test
+    fun envBoostIndoorMutesParkOnly() {
+        assertEquals(7, ParkWeather.envBoostPct(false, true, WindRel.OUT_CF, 20, 95, 1.28f))
+        assertEquals(-3, ParkWeather.envBoostPct(false, true, WindRel.OUT_CF, 20, 95, 0.90f))
+    }
+
+    @Test
+    fun sortXwobaAscendingMissingLast() {
+        val list = listOf(sp("NoX", xwoba = null, ks = 9f), sp("High", xwoba = 0.340f), sp("Low", xwoba = 0.250f))
+        val sorted = StartersSorter.sort(list, StartersSort.XWOBA, ascending = true)
+        assertEquals(listOf("Low", "High", "NoX"), sorted.map { it.name })
+    }
+
+    @Test
+    fun sortBoostRainAlwaysLast() {
+        val list = listOf(
+            sp("Rain", boost = -30, rain = true),
+            sp("Hit", boost = 18),
+            sp("Pitch", boost = -12),
+        )
+        val desc = StartersSorter.sort(list, StartersSort.BOOST, ascending = false)
+        assertEquals(listOf("Hit", "Pitch", "Rain"), desc.map { it.name })
+        val asc = StartersSorter.sort(list, StartersSort.BOOST, ascending = true)
+        assertEquals(listOf("Pitch", "Hit", "Rain"), asc.map { it.name })
+    }
+
+    @Test
+    fun sortProjKsAndTime() {
+        val early = Instant.parse("2026-09-05T17:00:00Z")
+        val late = Instant.parse("2026-09-05T23:00:00Z")
+        val list = listOf(sp("Ace", ks = 8.2f, start = late), sp("Soft", ks = 4.1f, start = early))
+        assertEquals("Ace", StartersSorter.sort(list, StartersSort.PROJ_KS, false).first().name)
+        assertEquals("Soft", StartersSorter.sort(list, StartersSort.PROJ_KS, true).first().name)
+        assertEquals("Soft", StartersSorter.sort(list, StartersSort.TIME, true).first().name)
+        assertEquals("Ace", StartersSorter.sort(list, StartersSort.TIME, false).first().name)
+    }
+
+    private fun sp(
+        name: String,
+        score: Int = 0,
+        ks: Float = 5f,
+        xwoba: Float? = null,
+        boost: Int = 0,
+        rain: Boolean = false,
+        start: Instant? = null,
+    ) = Starter(
+        rank = 1,
+        name = name,
+        team = "NYY",
+        opponent = "BOS",
+        venue = "Yankee Stadium",
+        weather = Weather.SUN,
+        tempF = 70,
+        outlook = Outlook.STABLE,
+        outlookScore = score,
+        projKPct = 25f,
+        nextStartKs = ks,
+        trend = emptyList(),
+        xwoba = xwoba,
+        wxTag = if (rain) WxTag.RAIN_RISK else WxTag.NEUTRAL,
+        envBoostPct = boost,
+        gameStart = start,
+    )
 }

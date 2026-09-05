@@ -53,6 +53,7 @@ object ParkWeather {
         val icon: Weather,
         val hrParkFactor: Float = 1f,
         val parkHint: String = ParkFactors.hint(1f),
+        val envBoostPct: Int = 0,
     )
 
     fun empty(): Snapshot = parse("", "", "")
@@ -154,11 +155,23 @@ object ParkWeather {
         } else {
             mlb
         }
-        return if (base.hrParkFactor == hrParkFactor) base else base.copy(
-            hrParkFactor = hrParkFactor,
-            parkHint = ParkFactors.hint(hrParkFactor),
-            tag = retag(base, hrParkFactor, indoor),
-        )
+        return if (base.hrParkFactor == hrParkFactor) base else {
+            val rain = base.tag == WxTag.RAIN_RISK || (base.precipPct != null && base.precipPct >= 40)
+            base.copy(
+                hrParkFactor = hrParkFactor,
+                parkHint = ParkFactors.hint(hrParkFactor),
+                tag = retag(base, hrParkFactor, indoor),
+                envBoostPct = envBoostPct(
+                    rain = rain,
+                    indoor = indoor,
+                    windRel = base.windRel,
+                    windMph = base.windMph,
+                    tempF = base.tempF,
+                    hrParkFactor = hrParkFactor,
+                    precipPct = base.precipPct,
+                ),
+            )
+        }
     }
 
     /**
@@ -270,6 +283,15 @@ object ParkWeather {
             icon = icon,
             hrParkFactor = hrParkFactor,
             parkHint = ParkFactors.hint(hrParkFactor),
+            envBoostPct = envBoostPct(
+                rain = rain,
+                indoor = indoor,
+                windRel = if (indoor) WindRel.NONE else windRel,
+                windMph = if (indoor) 0 else windMph,
+                tempF = if (indoor && tempF <= 0) 72 else tempF,
+                hrParkFactor = hrParkFactor,
+                precipPct = if (indoor) null else precipPct,
+            ),
         )
     }
 
@@ -308,6 +330,46 @@ object ParkWeather {
         pf >= 1.08f -> 8
         else -> 6
     }
+
+    /**
+     * Signed **hitter** environment boost % (worse for pitcher Ks when positive).
+     *
+     * ```
+     * park  = (HR_PF − 1.00) × 100          // Coors +28, Petco −10
+     * wind  = +1.2×mph out / −1.2×mph in    // cross = 0, cap ±18
+     * temp  = (tempF − 70) × 0.45           // cap ±12
+     * indoor = 0.25 × park only             // no outdoor wind/heat
+     * rain  = −28 − 0.35×max(0, precip−40)  // delay risk; never a K boost
+     * boost = clamp(sum, −40…+40); rain clamped −45…−20
+     * ```
+     */
+    fun envBoostPct(
+        rain: Boolean,
+        indoor: Boolean,
+        windRel: WindRel,
+        windMph: Int?,
+        tempF: Int,
+        hrParkFactor: Float,
+        precipPct: Int? = null,
+    ): Int {
+        val park = ((hrParkFactor - 1f) * 100f).coerceIn(-20f, 30f)
+        if (rain) {
+            val extra = ((precipPct ?: 40) - 40).coerceAtLeast(0) * 0.35f
+            return (-28f - extra).roundToInt().coerceIn(-45, -20)
+        }
+        if (indoor) return (park * 0.25f).roundToInt().coerceIn(-8, 8)
+        val mph = (windMph ?: 0).toFloat()
+        val wind = when {
+            isWindOut(windRel) -> (mph * 1.2f).coerceAtMost(18f)
+            isWindIn(windRel) -> -(mph * 1.2f).coerceAtMost(18f)
+            else -> 0f
+        }
+        val temp = if (tempF > 0) ((tempF - 70) * 0.45f).coerceIn(-12f, 12f) else 0f
+        return (park + wind + temp).roundToInt().coerceIn(-40, 40)
+    }
+
+    fun boostLabel(pct: Int): String =
+        if (pct > 0) "Boost +$pct%" else "Boost $pct%"
 
     internal fun pitcherMaxTemp(pf: Float): Int = when {
         pf <= 0.90f -> 76

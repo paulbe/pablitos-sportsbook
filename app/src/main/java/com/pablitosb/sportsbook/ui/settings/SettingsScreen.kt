@@ -36,7 +36,7 @@ fun SettingsScreen(onBack: () -> Unit) {
         "Park weather" to "Open-Meteo + multi-year HR park factor (same as Daily HR)",
         "FanDuel salaries" to "EXAMPLE formula / import — not live FD",
         "Underdog lines" to "Model board / import — not live UD",
-        "Version" to "1.7.0 (v0.1.7-debug)",
+        "Version" to "1.8.0 (v0.1.8-debug)",
     )
     Column(
         modifier = Modifier

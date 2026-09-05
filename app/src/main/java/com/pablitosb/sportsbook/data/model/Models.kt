@@ -1,5 +1,7 @@
 package com.pablitosb.sportsbook.data.model
 
+import java.time.Instant
+
 enum class Outlook { PROG, STABLE, REG }
 
 data class Starter(
@@ -34,6 +36,8 @@ data class Starter(
     val ace: Boolean = false,
     val hrParkFactor: Float = 1f,
     val parkHint: String = "",
+    val envBoostPct: Int = 0,
+    val gameStart: Instant? = null,
 )
 
 enum class Weather { SUN, CLOUD, RAIN }

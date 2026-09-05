@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.pablitosb.sportsbook.data.starters.StartersBoard
 import com.pablitosb.sportsbook.data.starters.StartersLoadException
 import com.pablitosb.sportsbook.data.starters.StartersRepository
+import com.pablitosb.sportsbook.data.starters.StartersSort
+import com.pablitosb.sportsbook.data.starters.StartersSorter
 import java.time.Instant
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
@@ -48,7 +50,22 @@ class StartersViewModel(
     var refreshing by mutableStateOf(false)
         private set
 
+    var sortKey by mutableStateOf(StartersSort.PROG)
+        private set
+
+    var sortAscending by mutableStateOf(StartersSorter.defaultAscending(StartersSort.PROG))
+        private set
+
     private var loadJob: Job? = null
+
+    fun selectSort(key: StartersSort) {
+        if (key == sortKey) {
+            sortAscending = !sortAscending
+        } else {
+            sortKey = key
+            sortAscending = StartersSorter.defaultAscending(key)
+        }
+    }
 
     init {
         refresh(initial = true)
