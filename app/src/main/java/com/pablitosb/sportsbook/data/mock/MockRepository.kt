@@ -160,6 +160,6 @@ object MockRepository {
         UnderdogProp(8, "Juan Soto", "NYY", "Hits Higher", "1.5", +104, 48.6f, 49.0f, Confidence.LOW),
     )
 
-    val plusEvCount: Int get() = props.count { it.edgePct > 0f }
-    val avgEdge: Float get() = props.filter { it.edgePct > 0f }.map { it.edgePct }.average().toFloat()
+    val plusEvCount: Int get() = props.count { (it.edgePct ?: 0f) > 0f }
+    val avgEdge: Float get() = props.mapNotNull { it.edgePct }.filter { it > 0f }.average().toFloat()
 }

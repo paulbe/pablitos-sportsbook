@@ -222,7 +222,7 @@ fun DfsLineupsScreen(
                     contest = viewModel.contest,
                     stackDots = viewModel.stackDots,
                     ownDots = viewModel.ownDots,
-                    onContest = viewModel::setContest,
+                    onContest = viewModel::selectContest,
                     onStack = viewModel::cycleStack,
                     onOwn = viewModel::cycleOwn,
                     onPage = { viewModel.currentLineupIndex = it },

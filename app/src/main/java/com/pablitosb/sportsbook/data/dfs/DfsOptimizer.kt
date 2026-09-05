@@ -32,12 +32,12 @@ object DfsOptimizer {
             .map { it.key }
         val stackA = teams.getOrNull(0)
         val stackB = teams.getOrNull(1)
-        val kinds = listOf(
+        val kinds: List<Pair<LineupKind, String?>> = listOf(
             LineupKind.CASH_CORE to null,
             LineupKind.STACK_A to stackA,
             LineupKind.STACK_B to stackB,
             LineupKind.LEVERAGE to stackA,
-            LineupKind.CONTRARIAN to teams.getOrNull(2) ?: stackB,
+            LineupKind.CONTRARIAN to (teams.getOrNull(2) ?: stackB),
         )
         val built = mutableListOf<DfsLineup>()
         val usedIds = mutableSetOf<Int>()

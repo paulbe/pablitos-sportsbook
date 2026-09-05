@@ -76,7 +76,7 @@ class DfsViewModel(
         refresh(initial = true)
     }
 
-    fun setContest(type: ContestType) {
+    fun selectContest(type: ContestType) {
         contest = type
         refresh()
     }
