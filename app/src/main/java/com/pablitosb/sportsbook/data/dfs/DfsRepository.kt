@@ -10,6 +10,16 @@ import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+data class DfsPoolSnapshot(
+    val slate: ProjectionBoard,
+    val pool: List<SlatePlayer>,
+    val salarySource: SalarySource,
+    val salaryNote: String,
+    val slates: List<DfsSlateOption> = emptyList(),
+    val selectedSlateId: String = "main",
+    val fdApiNote: String = "",
+)
+
 data class DfsBoard(
     val slate: ProjectionBoard,
     val pool: List<SlatePlayer>,
@@ -26,17 +36,13 @@ class DfsRepository(
     private val projections: ProjectionService = ProjectionService.shared,
     private val fdClient: FdSlateClient = FdSlateClient(),
 ) {
-    suspend fun load(
+    suspend fun loadPool(
         date: LocalDate,
-        contest: ContestType,
-        stackSize: Int,
-        ownLever: Int,
-        seed: Long,
         importedText: String?,
         exampleFileText: String?,
         selectedSlateId: String = "main",
         force: Boolean = false,
-    ): DfsBoard {
+    ): DfsPoolSnapshot {
         val board = try {
             projections.load(date, force)
         } catch (e: SlateLoadException) {
@@ -89,13 +95,11 @@ class DfsRepository(
         }
 
         if (hitters.isEmpty() && importedText.isNullOrBlank() && exampleFileText.isNullOrBlank()) {
-            return DfsBoard(
+            return DfsPoolSnapshot(
                 slate = board,
                 pool = emptyList(),
-                lineups = emptyList(),
                 salarySource = SalarySource.EXAMPLE_FORMULA,
                 salaryNote = board.emptyReason ?: "No batters on this slate.",
-                optimizeError = board.emptyReason,
                 slates = slates,
                 selectedSlateId = chosenId,
                 fdApiNote = fdNote,
@@ -128,20 +132,55 @@ class DfsRepository(
             )
         }
 
-        val result = runCatching {
-            DfsOptimizer.build(pool, contest, stackSize, ownLever, seed)
-        }.getOrElse { DfsOptimizer.Result(emptyList(), it.message ?: "Optimizer failed.") }
-
-        return DfsBoard(
+        return DfsPoolSnapshot(
             slate = board,
             pool = pool,
-            lineups = result.lineups,
             salarySource = source,
             salaryNote = note,
-            optimizeError = result.error,
             slates = slates,
             selectedSlateId = chosenId,
             fdApiNote = fdNote,
+        )
+    }
+
+    suspend fun load(
+        date: LocalDate,
+        contest: ContestType,
+        stackSize: Int,
+        ownLever: Int,
+        seed: Long,
+        importedText: String?,
+        exampleFileText: String?,
+        selectedSlateId: String = "main",
+        force: Boolean = false,
+    ): DfsBoard {
+        val snap = loadPool(date, importedText, exampleFileText, selectedSlateId, force)
+        if (snap.pool.isEmpty()) {
+            return DfsBoard(
+                slate = snap.slate,
+                pool = emptyList(),
+                lineups = emptyList(),
+                salarySource = snap.salarySource,
+                salaryNote = snap.salaryNote,
+                optimizeError = snap.salaryNote,
+                slates = snap.slates,
+                selectedSlateId = snap.selectedSlateId,
+                fdApiNote = snap.fdApiNote,
+            )
+        }
+        val result = runCatching {
+            DfsOptimizer.build(snap.pool, contest, stackSize, ownLever, seed)
+        }.getOrElse { DfsOptimizer.Result(emptyList(), it.message ?: "Optimizer failed.") }
+        return DfsBoard(
+            slate = snap.slate,
+            pool = snap.pool,
+            lineups = result.lineups,
+            salarySource = snap.salarySource,
+            salaryNote = snap.salaryNote,
+            optimizeError = result.error,
+            slates = snap.slates,
+            selectedSlateId = snap.selectedSlateId,
+            fdApiNote = snap.fdApiNote,
         )
     }
 

@@ -10,7 +10,12 @@ import com.pablitosb.sportsbook.data.model.ContestType
 import com.pablitosb.sportsbook.data.model.Weather
 import com.pablitosb.sportsbook.data.projections.SlateGame
 import com.pablitosb.sportsbook.data.props.PropsRepository
+import com.pablitosb.sportsbook.data.fdproj.FdPosFilter
+import com.pablitosb.sportsbook.data.fdproj.FdProjRow
+import com.pablitosb.sportsbook.data.fdproj.FdProjSort
+import com.pablitosb.sportsbook.data.fdproj.FdProjSorter
 import com.pablitosb.sportsbook.ui.dfs.DfsViewModel
+import com.pablitosb.sportsbook.ui.fdproj.FdProjViewModel
 import com.pablitosb.sportsbook.ui.props.PropsViewModel
 import java.time.Instant
 import java.time.ZoneId
@@ -26,6 +31,43 @@ class DfsCrashSafeTest {
         assertEquals(1, ctor.parameterCount)
         assertEquals("android.app.Application", ctor.parameterTypes[0].name)
     }
+
+    @Test
+    fun fdProjViewModelHasApplicationOnlyConstructor() {
+        val ctor = FdProjViewModel::class.java.constructors.single()
+        assertEquals(1, ctor.parameterCount)
+        assertEquals("android.app.Application", ctor.parameterTypes[0].name)
+    }
+
+    @Test
+    fun fdProjValueAndSort() {
+        val a = row("Ace", "P", 28f, 9000)
+        val b = row("Value", "OF", 12f, 2500)
+        val c = row("Cheap", "SS", 8f, 0)
+        assertEquals(3.11f, FdProjSorter.value(28f, 9000)!!, 0.02f)
+        val byVal = FdProjSorter.sort(listOf(a, b, c), FdProjSort.VALUE, ascending = false)
+        assertEquals(listOf("Value", "Ace", "Cheap"), byVal.map { it.name })
+        val ofOnly = FdProjSorter.filter(listOf(a, b, c), FdPosFilter.OF)
+        assertEquals(listOf("Value"), ofOnly.map { it.name })
+        val byProj = FdProjSorter.sort(listOf(a, b, c), FdProjSort.PROJ, ascending = false)
+        assertEquals("Ace", byProj.first().name)
+    }
+
+    private fun row(name: String, pos: String, proj: Float, salary: Int) = FdProjRow(
+        mlbId = name.hashCode(),
+        name = name,
+        team = "NYY",
+        opponent = "BOS",
+        pos = pos,
+        salary = salary,
+        proj = proj,
+        ceiling = proj * 1.2f,
+        value = FdProjSorter.value(proj, salary),
+        isPitcher = pos == "P",
+        inPostedLineup = true,
+        gameTimeLabel = "1:00 PM PT",
+        driver = "",
+    )
 
     @Test
     fun propsViewModelHasApplicationOnlyConstructor() {

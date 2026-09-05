@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.GpsFixed
+import androidx.compose.material.icons.outlined.Leaderboard
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.SportsBaseball
@@ -107,6 +108,13 @@ fun HomeScreen(onOpen: (Dest) -> Unit) {
                 title = "DFS Lineups",
                 subtitle = "Optimizer · EXAMPLE or imported slate",
                 onClick = { onOpen(Dest.Dfs) },
+            )
+            Spacer(Modifier.height(12.dp))
+            HomeTile(
+                icon = Icons.Outlined.Leaderboard,
+                title = "FD DFS Projections",
+                subtitle = "Live FanDuel pts board · choose slate",
+                onClick = { onOpen(Dest.FdProj) },
             )
             Spacer(Modifier.height(12.dp))
             HomeTile(

@@ -2,7 +2,7 @@
 
 Personal baseball edge toolkit for Android. Kotlin + Jetpack Compose, Material 3, dark navy + green (`#22C55E`).
 
-**Today** is always `America/Los_Angeles`. Options 1–4 read **MLB Stats API** (or a file you import). They do **not** fall back to the old hardcoded Cole/Judge demo athletes.
+**Today** is always `America/Los_Angeles`. Options 1–5 read **MLB Stats API** (or a file you import). They do **not** fall back to the old hardcoded Cole/Judge demo athletes.
 
 ## What’s live vs import-needed
 
@@ -11,6 +11,7 @@ Personal baseball edge toolkit for Android. Kotlin + Jetpack Compose, Material 3
 | **Projected Starters** | Probables, venue, Open-Meteo × HR park factor, K outlook, pred vs actual, Savant xwOBA | — | CSW / SwStr / invented weather |
 | **Daily HR Probability** | Day’s batters (posted lineups, else active roster hitters), season HR%/ISO/FB, park table, weather hydrate, opposing SP HR/9, platoon | — | Statcast barrel/xHR |
 | **DFS Lineups** | Same projections → expected FanDuel points; **Choose slate** (Main / Early / Late / Showdown); optimizer (classic $35k) | **Salaries** if you want real FanDuel prices (`api.fanduel.com/fixture-lists` is 401 without login) | Live FanDuel salaries labeled as live |
+| **FD DFS Projections** | Same live FD-point pipeline, ranked board, slate picker | **Salaries** for real prices / value | Live FanDuel salaries or ownership |
 | **Underdog Props** | Model Ks / HR 0.5 / hits probabilities | **Lines + odds** if you want edge vs a book | Live Underdog odds |
 
 ### Daily HR formula (implemented)
@@ -47,10 +48,11 @@ There is **no Underdog API**. Default is a **Model board** (our lines/probs only
 
 ## Screens
 
-- **Home** — four entries plus Models / Settings
+- **Home** — five entries plus Models / Settings
 - **Projected Starters** — live slate / reconstructed pred vs actual; sort by Prog, Proj Ks, xwOBA, weather/park boost %, or first pitch
 - **Daily HR Probability** — ranked game HR%
 - **DFS Lineups** — five swipeable Cash/GPP lineups from the optimizer
+- **FD DFS Projections** — sortable FanDuel-point board (not the optimizer)
 - **Underdog Props** — model board + optional imported lines
 - **Models** / **Settings** — what’s live vs import
 
@@ -58,7 +60,7 @@ There is **no Underdog API**. Default is a **Model board** (our lines/probs only
 
 `dist/PablitosSportsbook-debug.apk`
 
-On Android 8+: allow **Install unknown apps**, then install. GitHub release **v0.1.8-debug** publishes the same file as `PablitosSportsbook-debug.apk`.
+On Android 8+: allow **Install unknown apps**, then install. GitHub release **v0.1.9-debug** publishes the same file as `PablitosSportsbook-debug.apk`.
 
 ## Open in Android Studio
 
