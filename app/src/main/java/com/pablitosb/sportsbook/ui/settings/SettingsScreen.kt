@@ -31,7 +31,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     val rows = listOf(
         "Theme" to "Dark navy + green (locked)",
         "Slate timezone" to "America/Los_Angeles",
-        "MLB feed" to "statsapi.mlb.com — starters, HR, DFS proj, props model",
+        "MLB feed" to "statsapi.mlb.com — starters, HR, TB, DFS proj, props model",
         "Savant xwOBA" to "Public expected-stats CSV · missing row shows —",
         "Park weather" to "Open-Meteo + multi-year HR park factor (same as Daily HR)",
         "FanDuel salaries" to "EXAMPLE formula / import / Sample CSV — not live FD",
