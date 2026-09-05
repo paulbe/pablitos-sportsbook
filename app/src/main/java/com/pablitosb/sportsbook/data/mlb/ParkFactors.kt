@@ -1,10 +1,20 @@
 package com.pablitosb.sportsbook.data.mlb
 
+import java.util.Locale
+
 /**
- * Best-effort HR park multipliers (1.00 = league average).
- * Static table keyed by MLB Stats API venue id — not a live Statcast feed.
+ * Multi-year **HR** park factors (1.00 = MLB average).
+ *
+ * Hand-compiled from published Baseball-Reference / FanGraphs-style
+ * 3-year HR PF (not a live Statcast park feed). Same table the Daily HR
+ * board uses. Coors 1.28, GABP 1.18, Yankee Stadium 1.15; Oracle 0.88,
+ * Petco / Kauffman 0.90, loanDepot 0.92.
  */
 object ParkFactors {
+    const val HR_PARK = 1.12f
+    const val PITCHER_PARK = 0.94f
+    const val BANDBOX = 1.20f
+
     private val byVenueId: Map<Int, Float> = mapOf(
         1 to 0.96f, // Angel Stadium
         2 to 1.12f, // Camden Yards
@@ -51,7 +61,22 @@ object ParkFactors {
             n.contains("oracle") -> 0.88f
             n.contains("petco") -> 0.90f
             n.contains("kauffman") -> 0.90f
+            n.contains("loandepot") -> 0.92f
             else -> 1.00f
+        }
+    }
+
+    fun isHrPark(pf: Float) = pf >= HR_PARK
+
+    fun isPitcherPark(pf: Float) = pf <= PITCHER_PARK
+
+    /** Subtitle on the starters weather card, e.g. `HR park · PF 1.28`. */
+    fun hint(pf: Float): String {
+        val idx = String.format(Locale.US, "PF %.2f", pf)
+        return when {
+            isHrPark(pf) -> "HR park · $idx"
+            isPitcherPark(pf) -> "Pitcher park · $idx"
+            else -> idx
         }
     }
 }

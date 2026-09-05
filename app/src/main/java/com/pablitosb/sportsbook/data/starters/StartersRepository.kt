@@ -1,5 +1,6 @@
 package com.pablitosb.sportsbook.data.starters
 
+import com.pablitosb.sportsbook.data.mlb.ParkFactors
 import com.pablitosb.sportsbook.data.mlb.ParkSites
 import com.pablitosb.sportsbook.data.model.Starter
 import com.pablitosb.sportsbook.data.model.Weather
@@ -138,6 +139,8 @@ class StartersRepository(
                 weatherCondition = row.wx.condition,
                 xwoba = xwobaById[row.mlbId],
                 ace = projection.outlookScore >= 8 || predKPct >= 28f,
+                hrParkFactor = row.wx.hrParkFactor,
+                parkHint = row.wx.parkHint,
             )
         }
         StartersBoard(
@@ -183,14 +186,16 @@ class StartersRepository(
             val venue = venueObj?.optString("name").orEmpty()
             val venueId = venueObj?.optIntOrNull("id")
             val weatherObj = game.optObj("weather")
+            val hrPf = ParkFactors.hrMultiplier(venueId, venue)
             val mlbWx = ParkWeather.parse(
                 condition = weatherObj?.optString("condition").orEmpty(),
                 tempRaw = weatherObj?.optString("temp").orEmpty(),
                 windRaw = weatherObj?.optString("wind").orEmpty(),
+                hrParkFactor = hrPf,
             )
             val gamePk = game.optIntOrNull("gamePk")
             val indoor = ParkSites.isIndoor(ParkSites.roof(venueId, venue), mlbWx.condition)
-            val wx = ParkWeather.resolve(forecastByGame[gamePk], mlbWx, indoor)
+            val wx = ParkWeather.resolve(forecastByGame[gamePk], mlbWx, indoor, hrPf)
             val gameTime = formatGameTime(game.optString("gameDate"))
             val teams = game.optObj("teams") ?: continue
             val home = teams.optObj("home")
@@ -236,6 +241,7 @@ class StartersRepository(
             async {
                 gate.withPermit {
                     val hour = runCatching { weatherApi.hourAt(lat, lon, at, slate) }.getOrNull()
+                    val hrPf = ParkFactors.hrMultiplier(venueId, venueName)
                     val snap = hour?.let {
                         ParkWeather.fromForecast(
                             tempF = it.tempF,
@@ -246,6 +252,7 @@ class StartersRepository(
                             cfBearingDeg = bearing,
                             indoor = indoor,
                             mlbCondition = mlbCondition,
+                            hrParkFactor = hrPf,
                         )
                     }
                     gamePk to snap

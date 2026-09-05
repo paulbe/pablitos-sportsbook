@@ -3,6 +3,7 @@ package com.pablitosb.sportsbook
 import com.pablitosb.sportsbook.data.model.Weather
 import com.pablitosb.sportsbook.data.model.WindRel
 import com.pablitosb.sportsbook.data.model.WxTag
+import com.pablitosb.sportsbook.data.mlb.ParkFactors
 import com.pablitosb.sportsbook.data.mlb.ParkSites
 import com.pablitosb.sportsbook.data.mlb.RoofKind
 import com.pablitosb.sportsbook.data.remote.OpenMeteoClient
@@ -222,6 +223,108 @@ class StartersUpgradeTest {
         assertTrue(ParkSites.isIndoor(RoofKind.DOME, ""))
         assertTrue(!ParkSites.isIndoor(RoofKind.RETRACTABLE, ""))
         assertTrue(ParkSites.isIndoor(RoofKind.RETRACTABLE, "Roof closed"))
+    }
+
+    @Test
+    fun coorsCalmIsHrWeatherEvenWithoutWind() {
+        val snap = ParkWeather.fromForecast(
+            tempF = 70,
+            windMph = 0,
+            windFromDeg = 0,
+            precipPct = 5,
+            weatherCode = 0,
+            cfBearingDeg = 4f,
+            indoor = false,
+            hrParkFactor = 1.28f,
+        )
+        assertEquals(WxTag.HR_WEATHER, snap.tag)
+        assertEquals("HR park · PF 1.28", snap.parkHint)
+    }
+
+    @Test
+    fun coorsMildOutIsHrWeather() {
+        val snap = ParkWeather.fromForecast(
+            tempF = 68,
+            windMph = 4,
+            windFromDeg = 184,
+            precipPct = 0,
+            weatherCode = 1,
+            cfBearingDeg = 4f,
+            indoor = false,
+            hrParkFactor = ParkFactors.hrMultiplier(19, "Coors Field"),
+        )
+        assertEquals(WindRel.OUT_CF, snap.windRel)
+        assertEquals(WxTag.HR_WEATHER, snap.tag)
+    }
+
+    @Test
+    fun petcoMildOutStaysNeutral() {
+        val snap = ParkWeather.fromForecast(
+            tempF = 72,
+            windMph = 8,
+            windFromDeg = 180,
+            precipPct = 0,
+            weatherCode = 0,
+            cfBearingDeg = 0f,
+            indoor = false,
+            hrParkFactor = 0.90f,
+        )
+        assertEquals(WindRel.OUT_CF, snap.windRel)
+        assertEquals(WxTag.NEUTRAL, snap.tag)
+        assertEquals("Pitcher park · PF 0.90", snap.parkHint)
+    }
+
+    @Test
+    fun petcoStrongOutAndHeatOverridesToHr() {
+        val snap = ParkWeather.fromForecast(
+            tempF = 88,
+            windMph = 12,
+            windFromDeg = 180,
+            precipPct = 0,
+            weatherCode = 0,
+            cfBearingDeg = 0f,
+            indoor = false,
+            hrParkFactor = 0.90f,
+        )
+        assertEquals(WxTag.HR_WEATHER, snap.tag)
+    }
+
+    @Test
+    fun petcoCalmBiasesPitcherWx() {
+        val snap = ParkWeather.fromForecast(
+            tempF = 70,
+            windMph = 2,
+            windFromDeg = 0,
+            precipPct = 5,
+            weatherCode = 2,
+            cfBearingDeg = 0f,
+            indoor = false,
+            hrParkFactor = 0.90f,
+        )
+        assertEquals(WxTag.PITCHER_WX, snap.tag)
+    }
+
+    @Test
+    fun rainRiskIgnoresCoorsParkFactor() {
+        val snap = ParkWeather.fromForecast(
+            tempF = 70,
+            windMph = 4,
+            windFromDeg = 184,
+            precipPct = 70,
+            weatherCode = 61,
+            cfBearingDeg = 4f,
+            indoor = false,
+            hrParkFactor = 1.28f,
+        )
+        assertEquals(WxTag.RAIN_RISK, snap.tag)
+        assertEquals("HR park · PF 1.28", snap.parkHint)
+    }
+
+    @Test
+    fun leagueAverageOutSixStillHr() {
+        val snap = ParkWeather.parse("Sunny", "70", "6 mph, Out To CF", hrParkFactor = 1.00f)
+        assertEquals(WxTag.HR_WEATHER, snap.tag)
+        assertEquals("PF 1.00", snap.parkHint)
     }
 
     @Test

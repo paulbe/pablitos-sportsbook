@@ -32,6 +32,8 @@ data class Starter(
     val weatherCondition: String = "",
     val xwoba: Float? = null,
     val ace: Boolean = false,
+    val hrParkFactor: Float = 1f,
+    val parkHint: String = "",
 )
 
 enum class Weather { SUN, CLOUD, RAIN }

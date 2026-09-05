@@ -1,5 +1,6 @@
 package com.pablitosb.sportsbook.data.starters
 
+import com.pablitosb.sportsbook.data.mlb.ParkFactors
 import com.pablitosb.sportsbook.data.model.Weather
 import com.pablitosb.sportsbook.data.model.WindRel
 import com.pablitosb.sportsbook.data.model.WxTag
@@ -25,11 +26,14 @@ import kotlin.math.roundToInt
  * - Δ ≈ −90° L → R
  * - Δ ≈ −135° Out to RF
  *
- * Tag heuristics (first match wins)
- * 1. **RAIN RISK** — precip ≥ 40%, rain WMO code with precip ≥ 25%,
- *    thunderstorm code, or MLB condition rain/delay text.
- * 2. **HR WEATHER** — outdoor and (wind out ≥ 6 mph **or** temp ≥ 82°F).
- * 3. **PITCHER WX** — outdoor wind in ≥ 6 mph and temp ≤ 72 dry;
+ * Tag heuristics (first match wins). Wind/temp thresholds **shift** with
+ * the static multi-year HR park factor ([ParkFactors], 1.00 = average):
+ * 1. **RAIN RISK** — weather-only. Park factor never clears rain.
+ * 2. **HR WEATHER** — outdoor. League park: out ≥ 6 mph or temp ≥ 82°F.
+ *    HR parks (PF ≥ 1.12) need only mild out / cooler heat; Coors-class
+ *    (PF ≥ 1.20) tags HR even in calm air if it isn’t a cold in-wind.
+ *    Pitcher parks (PF ≤ 0.94) need a strong out or real heat.
+ * 3. **PITCHER WX** — outdoor in-wind + cool, easier in pitcher parks;
  *    or indoor (fixed dome / roof closed) and dry.
  * 4. **NEUTRAL** — otherwise (including failed fetch).
  *
@@ -47,11 +51,18 @@ object ParkWeather {
         val precipPct: Int?,
         val tag: WxTag,
         val icon: Weather,
+        val hrParkFactor: Float = 1f,
+        val parkHint: String = ParkFactors.hint(1f),
     )
 
     fun empty(): Snapshot = parse("", "", "")
 
-    fun parse(condition: String, tempRaw: String, windRaw: String): Snapshot {
+    fun parse(
+        condition: String,
+        tempRaw: String,
+        windRaw: String,
+        hrParkFactor: Float = 1f,
+    ): Snapshot {
         val conditionClean = condition.trim()
         val temp = tempRaw.toIntOrNull() ?: 0
         val mph = Regex("""(\d+)\s*mph""", RegexOption.IGNORE_CASE)
@@ -70,6 +81,7 @@ object ParkWeather {
             weatherCode = null,
             windFromDeg = null,
             fallbackWindRaw = windRaw,
+            hrParkFactor = hrParkFactor,
         )
     }
 
@@ -82,6 +94,7 @@ object ParkWeather {
         cfBearingDeg: Float?,
         indoor: Boolean,
         mlbCondition: String = "",
+        hrParkFactor: Float = 1f,
     ): Snapshot {
         val mph = windMph
         val rel = when {
@@ -108,6 +121,7 @@ object ParkWeather {
             windFromDeg = windFromDeg,
             fallbackWindRaw = "",
             indoorLabel = indoor,
+            hrParkFactor = hrParkFactor,
         )
     }
 
@@ -115,7 +129,12 @@ object ParkWeather {
      * Forecast wins when it has a temp or wind. MLB hydrate fills gaps only.
      * Indoor (dome / roof closed) always overrides outdoor wind.
      */
-    fun resolve(forecast: Snapshot?, mlb: Snapshot, indoor: Boolean): Snapshot {
+    fun resolve(
+        forecast: Snapshot?,
+        mlb: Snapshot,
+        indoor: Boolean,
+        hrParkFactor: Float = 1f,
+    ): Snapshot {
         if (indoor) {
             val base = forecast ?: mlb
             return fromForecast(
@@ -127,12 +146,19 @@ object ParkWeather {
                 cfBearingDeg = null,
                 indoor = true,
                 mlbCondition = mlb.condition.ifBlank { "Roof closed" },
+                hrParkFactor = hrParkFactor,
             )
         }
-        if (forecast != null && (forecast.tempF > 0 || forecast.windMph != null)) {
-            return forecast
+        val base = if (forecast != null && (forecast.tempF > 0 || forecast.windMph != null)) {
+            forecast
+        } else {
+            mlb
         }
-        return mlb
+        return if (base.hrParkFactor == hrParkFactor) base else base.copy(
+            hrParkFactor = hrParkFactor,
+            parkHint = ParkFactors.hint(hrParkFactor),
+            tag = retag(base, hrParkFactor, indoor),
+        )
     }
 
     /**
@@ -173,6 +199,32 @@ object ParkWeather {
         }
     }
 
+    internal fun classifyTag(
+        rain: Boolean,
+        indoor: Boolean,
+        windRel: WindRel,
+        windMph: Int?,
+        tempF: Int,
+        hrParkFactor: Float,
+    ): WxTag {
+        if (rain) return WxTag.RAIN_RISK
+        if (indoor) return WxTag.PITCHER_WX
+        val mph = windMph ?: 0
+        val out = isWindOut(windRel)
+        val inn = isWindIn(windRel)
+        val hrWind = hrOutMph(hrParkFactor)
+        val hrTemp = hrTempF(hrParkFactor)
+        val pIn = pitcherInMph(hrParkFactor)
+        val pTemp = pitcherMaxTemp(hrParkFactor)
+        val bandbox = hrParkFactor >= ParkFactors.BANDBOX && !inn && tempF >= 65
+        val pitcherParkCalm = hrParkFactor <= 0.90f && !out && tempF in 1..74 && mph < 8
+        return when {
+            out && mph >= hrWind || tempF >= hrTemp || bandbox -> WxTag.HR_WEATHER
+            inn && mph >= pIn && tempF in 1..pTemp || pitcherParkCalm -> WxTag.PITCHER_WX
+            else -> WxTag.NEUTRAL
+        }
+    }
+
     private fun assemble(
         condition: String,
         tempF: Int,
@@ -185,6 +237,7 @@ object ParkWeather {
         windFromDeg: Int?,
         fallbackWindRaw: String,
         indoorLabel: Boolean = indoor,
+        hrParkFactor: Float = 1f,
     ): Snapshot {
         val rain = when {
             indoor -> false
@@ -194,13 +247,7 @@ object ParkWeather {
             rainHint && !indoor -> true
             else -> false
         }
-        val tag = when {
-            rain -> WxTag.RAIN_RISK
-            indoor -> WxTag.PITCHER_WX
-            isWindOut(windRel) && (windMph ?: 0) >= 6 || tempF >= 82 -> WxTag.HR_WEATHER
-            isWindIn(windRel) && (windMph ?: 0) >= 6 && tempF in 1..72 && !rain -> WxTag.PITCHER_WX
-            else -> WxTag.NEUTRAL
-        }
+        val tag = classifyTag(rain, indoor, windRel, windMph, tempF, hrParkFactor)
         val icon = when {
             rain -> Weather.RAIN
             weatherCode != null -> iconForCode(weatherCode)
@@ -221,7 +268,53 @@ object ParkWeather {
             precipPct = if (indoor) null else precipPct,
             tag = tag,
             icon = icon,
+            hrParkFactor = hrParkFactor,
+            parkHint = ParkFactors.hint(hrParkFactor),
         )
+    }
+
+    private fun retag(base: Snapshot, hrParkFactor: Float, indoor: Boolean): WxTag {
+        val rain = base.tag == WxTag.RAIN_RISK || (base.precipPct != null && base.precipPct >= 40)
+        return classifyTag(rain, indoor, base.windRel, base.windMph, base.tempF, hrParkFactor)
+    }
+
+    /** League average: out ≥ 6 mph. HR parks allow a lighter breeze; pitcher parks need a push. */
+    internal fun hrOutMph(pf: Float): Int = when {
+        pf >= 1.15f -> 3
+        pf >= ParkFactors.HR_PARK -> 4
+        pf >= 1.08f -> 5
+        pf <= 0.90f -> 11
+        pf <= ParkFactors.PITCHER_PARK -> 10
+        pf <= 0.96f -> 8
+        else -> 6
+    }
+
+    internal fun hrTempF(pf: Float): Int = when {
+        pf >= 1.15f -> 75
+        pf >= ParkFactors.HR_PARK -> 76
+        pf >= 1.08f -> 78
+        pf <= 0.90f -> 90
+        pf <= ParkFactors.PITCHER_PARK -> 88
+        pf <= 0.96f -> 85
+        else -> 82
+    }
+
+    internal fun pitcherInMph(pf: Float): Int = when {
+        pf <= 0.90f -> 3
+        pf <= ParkFactors.PITCHER_PARK -> 4
+        pf <= 0.96f -> 5
+        pf >= 1.15f -> 10
+        pf >= ParkFactors.HR_PARK -> 9
+        pf >= 1.08f -> 8
+        else -> 6
+    }
+
+    internal fun pitcherMaxTemp(pf: Float): Int = when {
+        pf <= 0.90f -> 76
+        pf <= ParkFactors.PITCHER_PARK -> 75
+        pf >= 1.15f -> 66
+        pf >= ParkFactors.HR_PARK -> 68
+        else -> 72
     }
 
     private fun formatWind(rel: WindRel, mph: Int?, raw: String, fromDeg: Int?): String {

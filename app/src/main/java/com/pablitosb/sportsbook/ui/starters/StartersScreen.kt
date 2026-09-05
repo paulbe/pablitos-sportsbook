@@ -316,7 +316,8 @@ private fun ReadyList(state: StartersUiState.Ready) {
                     "Outlook = quality (proj K% vs 22.5% lg) + last-5-GS vs season K% trajectory. " +
                         "Proj K% blends recent K%, season K%, and strike%. Proj Ks ≈ proj K% × expected BF. " +
                         "Wind/temp/precip are Open-Meteo at the park lat/long for first pitch, rotated by " +
-                        "MLB CF azimuth (In/Out CF/LF/RF or L→R / R→L). Domes / closed roofs ignore outdoor wind. " +
+                        "MLB CF azimuth. Tags also use the same multi-year HR park factor as the Daily HR board " +
+                        "(Coors 1.28, Petco 0.90). Rain risk ignores PF. Domes / closed roofs ignore outdoor wind. " +
                         "Fetch failure is Neutral / —. Use ◀ ▶ or the date chip to jump days."
                 },
                 color = AccentGreen,
@@ -365,7 +366,7 @@ private fun DotLab(label: String, color: Color) {
 @Composable
 private fun WeatherLegend() {
     Column {
-        Text("WEATHER VS PARK", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp)
+        Text("WEATHER + PARK FACTOR", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp)
         Spacer(Modifier.height(6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             LegendSwatch(RegRed, "RAIN RISK")
@@ -378,7 +379,7 @@ private fun WeatherLegend() {
         }
         Spacer(Modifier.height(4.dp))
         Text(
-            "Rain/delay threat · wind out or hot · wind in, cool, dry · no major impact.",
+            "Rain stays weather-only. HR / pitcher chips blend Open-Meteo with the multi-year HR park factor (PF 1.00 = average).",
             color = TextMuted,
             fontSize = 10.sp,
             lineHeight = 14.sp,
@@ -662,6 +663,14 @@ private fun WeatherCard(starter: Starter) {
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
+            }
+            if (starter.parkHint.isNotBlank()) {
+                Text(
+                    starter.parkHint,
+                    color = TextMuted,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                )
             }
             Spacer(Modifier.height(4.dp))
             WxTagChip(tagLabel, tagColor)

@@ -33,10 +33,10 @@ fun SettingsScreen(onBack: () -> Unit) {
         "Slate timezone" to "America/Los_Angeles",
         "MLB feed" to "statsapi.mlb.com — starters, HR, DFS proj, props model",
         "Savant xwOBA" to "Public expected-stats CSV · missing row shows —",
-        "Park weather" to "Open-Meteo hourly at park lat/long · no API key",
+        "Park weather" to "Open-Meteo + multi-year HR park factor (same as Daily HR)",
         "FanDuel salaries" to "EXAMPLE formula / import — not live FD",
         "Underdog lines" to "Model board / import — not live UD",
-        "Version" to "1.6.0 (v0.1.6-debug)",
+        "Version" to "1.7.0 (v0.1.7-debug)",
     )
     Column(
         modifier = Modifier
@@ -68,7 +68,7 @@ fun SettingsScreen(onBack: () -> Unit) {
         }
         Spacer(Modifier.height(16.dp))
         Text(
-            "Starters weather is Open-Meteo at each park (MLB hydrate is backup). Pitcher xwOBA is season-to-date Savant expected wOBA against (missing row = —).",
+            "Starters chips blend Open-Meteo with the static HR park factor (Coors 1.28, Petco 0.90). Rain is weather-only. Pitcher xwOBA is season-to-date Savant (missing = —).",
             color = AccentGreen,
             fontSize = 12.sp,
         )

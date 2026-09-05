@@ -32,7 +32,7 @@ fun ModelsScreen(onBack: () -> Unit) {
     val cards = listOf(
         Triple(
             "SP Progression",
-            "Outlook + Proj Ks + Open-Meteo park wind + Statcast xwOBA",
+            "Outlook + Proj Ks + Open-Meteo × HR park factor + Statcast xwOBA",
             "Ranks today's starters PROG → REG",
         ),
         Triple("Game HR", "Talent × park × weather × pitcher × platoon", "Daily home-run probability board"),
