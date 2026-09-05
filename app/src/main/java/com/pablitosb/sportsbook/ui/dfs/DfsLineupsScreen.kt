@@ -100,6 +100,7 @@ fun DfsLineupsScreen(
     val scope = rememberCoroutineScope()
     var showPicker by remember { mutableStateOf(false) }
     var showImport by remember { mutableStateOf(false) }
+    var showSlates by remember { mutableStateOf(false) }
     var paste by remember { mutableStateOf("") }
 
     fun toast(msg: String) = Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
@@ -156,6 +157,50 @@ fun DfsLineupsScreen(
                 },
             ) { DatePicker(state = pickerState) }
         }
+        val slateOptions = (viewModel.ui as? DfsUiState.Ready)?.board?.slates.orEmpty()
+        if (showSlates) {
+            AlertDialog(
+                onDismissRequest = { showSlates = false },
+                title = { Text("Choose slate") },
+                text = {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        Text(
+                            (viewModel.ui as? DfsUiState.Ready)?.board?.fdApiNote
+                                ?: "Pick Main, Early, Late, or a single-game Showdown pool.",
+                            color = TextMuted,
+                            fontSize = 12.sp,
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        slateOptions.forEach { option ->
+                            val on = option.id == viewModel.selectedSlateId
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (on) AccentGreen.copy(alpha = 0.16f) else CardFill)
+                                    .border(1.dp, if (on) AccentGreen else CardStroke, RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        viewModel.selectSlate(option.id)
+                                        showSlates = false
+                                        toast("Loaded ${option.title}")
+                                    }
+                                    .padding(10.dp),
+                            ) {
+                                Text(option.title, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                                Text(option.subtitle, color = TextMuted, fontSize = 12.sp)
+                            }
+                        }
+                        if (slateOptions.isEmpty()) {
+                            Text("No slates yet — wait for MLB games or import a CSV.", color = TextMuted, fontSize = 13.sp)
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showSlates = false }) { Text("Close", color = AccentGreen) }
+                },
+            )
+        }
         if (showImport) {
             AlertDialog(
                 onDismissRequest = { showImport = false },
@@ -208,7 +253,11 @@ fun DfsLineupsScreen(
         ) {
             when (val state = viewModel.ui) {
                 is DfsUiState.Loading -> SlateLoading(state.slateDate)
-                is DfsUiState.Error -> SlateMessage("DFS slate unavailable", state.message, { viewModel.refresh() })
+                is DfsUiState.Error -> SlateMessage(
+                    title = "DFS slate unavailable",
+                    body = state.message + " You can still import a salary CSV.",
+                    onRetry = { viewModel.refresh() },
+                )
                 is DfsUiState.Empty -> SlateMessage(
                     title = "No lineups",
                     body = state.message,
@@ -227,6 +276,7 @@ fun DfsLineupsScreen(
                     onOwn = viewModel::cycleOwn,
                     onPage = { viewModel.currentLineupIndex = it },
                     onImport = { showImport = true },
+                    onChooseSlate = { showSlates = true },
                     onClearImport = {
                         viewModel.clearImport()
                         toast("Back to EXAMPLE formula salaries.")
@@ -297,14 +347,22 @@ private fun ReadyDfs(
     onOwn: () -> Unit,
     onPage: (Int) -> Unit,
     onImport: () -> Unit,
+    onChooseSlate: () -> Unit,
     onClearImport: () -> Unit,
 ) {
     val board = state.board
     val lineups = board.lineups
-    val pagerState = rememberPagerState(initialPage = 0, pageCount = { lineups.size.coerceAtLeast(1) })
+    val safeCount = lineups.size.coerceAtLeast(1)
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { safeCount })
     val scope = rememberCoroutineScope()
+    androidx.compose.runtime.LaunchedEffect(lineups.size) {
+        if (pagerState.currentPage >= lineups.size && lineups.isNotEmpty()) {
+            runCatching { pagerState.scrollToPage(0) }
+        }
+        onPage(pagerState.currentPage.coerceIn(0, (lineups.size - 1).coerceAtLeast(0)))
+    }
     androidx.compose.runtime.LaunchedEffect(pagerState.currentPage) {
-        onPage(pagerState.currentPage)
+        onPage(pagerState.currentPage.coerceIn(0, (lineups.size - 1).coerceAtLeast(0)))
     }
 
     Column(
@@ -330,7 +388,19 @@ private fun ReadyDfs(
             },
         )
         Spacer(Modifier.height(6.dp))
+        val selected = board.slates.firstOrNull { it.id == board.selectedSlateId }
+        StubButton(
+            label = "Choose slate · ${selected?.title ?: "Main"}",
+            onClick = onChooseSlate,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(board.fdApiNote, color = TextMuted, fontSize = 11.sp)
+        Spacer(Modifier.height(4.dp))
         Text(board.salaryNote, color = TextMuted, fontSize = 12.sp)
+        if (board.optimizeError != null && board.lineups.isEmpty()) {
+            Text(board.optimizeError, color = TextMuted, fontSize = 12.sp)
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Import slate", color = AccentGreen, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(onClick = onImport))
             if (board.salarySource != SalarySource.EXAMPLE_FORMULA) {
@@ -368,7 +438,10 @@ private fun ReadyDfs(
                     .fillMaxWidth()
                     .height(430.dp),
             ) { page ->
-                LineupCard(lineup = lineups[page], selected = pagerState.currentPage == page)
+                val lineup = lineups.getOrNull(page)
+                if (lineup != null) {
+                    LineupCard(lineup = lineup, selected = pagerState.currentPage == page)
+                }
             }
             Spacer(Modifier.height(10.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {

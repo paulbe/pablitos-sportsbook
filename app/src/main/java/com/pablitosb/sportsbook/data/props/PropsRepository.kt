@@ -196,14 +196,16 @@ class PropsRepository(
                 lines.first().lowercase(Locale.US).startsWith("name")
             ) 1 else 0
             return lines.drop(start).mapNotNull { line ->
-                val cols = if (line.contains('\t')) line.split('\t') else line.split(',')
-                if (cols.size < 5) return@mapNotNull null
-                val player = cols[0].trim().ifBlank { return@mapNotNull null }
-                val market = cols[1].trim()
-                val lineVal = cols[2].trim().toDoubleOrNull() ?: return@mapNotNull null
-                val side = cols[3].trim()
-                val odds = cols[4].trim().replace("+", "").toIntOrNull() ?: return@mapNotNull null
-                ParsedPropLine(player, market, lineVal, side, odds)
+                runCatching {
+                    val cols = if (line.contains('\t')) line.split('\t') else line.split(',')
+                    if (cols.size < 5) return@mapNotNull null
+                    val player = cols[0].trim().ifBlank { return@mapNotNull null }
+                    val market = cols[1].trim()
+                    val lineVal = cols[2].trim().toDoubleOrNull() ?: return@mapNotNull null
+                    val side = cols[3].trim()
+                    val odds = cols[4].trim().replace("+", "").toIntOrNull() ?: return@mapNotNull null
+                    ParsedPropLine(player, market, lineVal, side, odds)
+                }.getOrNull()
             }
         }
     }

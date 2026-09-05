@@ -29,10 +29,12 @@ sealed interface PropsUiState {
     data class Error(val slateDate: LocalDate, val message: String) : PropsUiState
 }
 
+/** Application-only constructor so the default AndroidViewModel factory can instantiate us. */
 class PropsViewModel(
     app: Application,
-    private val repository: PropsRepository = PropsRepository(),
 ) : AndroidViewModel(app) {
+
+    private val repository = PropsRepository()
 
     val today: LocalDate get() = LocalDate.now(StartersRepository.SLATE_ZONE)
     val minDate: LocalDate
@@ -71,7 +73,7 @@ class PropsViewModel(
     }
 
     fun applyImport(text: String) {
-        imported = PropsRepository.parseImport(text)
+        imported = runCatching { PropsRepository.parseImport(text) }.getOrDefault(emptyList())
         refresh(initial = true)
     }
 

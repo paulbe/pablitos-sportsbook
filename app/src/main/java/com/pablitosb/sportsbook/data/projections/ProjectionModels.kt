@@ -26,6 +26,7 @@ data class SlateGame(
     val awayPitcherName: String,
     val postponed: Boolean,
     val gameTimeLabel: String,
+    val startUtc: Instant? = null,
     val homeLineupPosted: Boolean,
     val awayLineupPosted: Boolean,
 )

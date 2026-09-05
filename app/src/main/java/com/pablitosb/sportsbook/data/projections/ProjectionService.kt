@@ -336,6 +336,7 @@ class ProjectionService(
             awayPitcherName = awayP?.optString("fullName").orEmpty(),
             postponed = postponed,
             gameTimeLabel = formatGameTime(game.optString("gameDate")),
+            startUtc = runCatching { Instant.parse(game.optString("gameDate")) }.getOrNull(),
             homeLineupPosted = homeLu.size >= 8,
             awayLineupPosted = awayLu.size >= 8,
         ).also {

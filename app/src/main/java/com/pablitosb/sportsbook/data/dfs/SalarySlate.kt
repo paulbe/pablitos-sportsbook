@@ -128,16 +128,18 @@ object SalarySlate {
         if (lines.isEmpty()) return emptyList()
         val start = if (looksLikeHeader(lines.first())) 1 else 0
         return lines.drop(start).mapNotNull { line ->
-            val cols = splitRow(line)
-            if (cols.size < 4) return@mapNotNull null
-            val name = cols[0].trim().ifBlank { return@mapNotNull null }
-            val team = cols.getOrNull(1).orEmpty().trim()
-            val pos = cols.getOrNull(2).orEmpty().trim()
-            val salary = cols.getOrNull(3)?.replace("$", "")?.replace(",", "")?.toIntOrNull()
-                ?: return@mapNotNull null
-            val proj = cols.getOrNull(4)?.toFloatOrNull()
-            val mlbId = cols.getOrNull(5)?.toIntOrNull()
-            ParsedSalaryRow(name, team, pos, salary, proj, mlbId)
+            runCatching {
+                val cols = splitRow(line)
+                if (cols.size < 4) return@mapNotNull null
+                val name = cols[0].trim().ifBlank { return@mapNotNull null }
+                val team = cols.getOrNull(1).orEmpty().trim()
+                val pos = cols.getOrNull(2).orEmpty().trim()
+                val salary = cols.getOrNull(3)?.replace("$", "")?.replace(",", "")?.toIntOrNull()
+                    ?: return@mapNotNull null
+                val proj = cols.getOrNull(4)?.toFloatOrNull()
+                val mlbId = cols.getOrNull(5)?.toIntOrNull()
+                ParsedSalaryRow(name, team, pos, salary, proj, mlbId)
+            }.getOrNull()
         }
     }
 

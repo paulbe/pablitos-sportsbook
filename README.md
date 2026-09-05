@@ -10,7 +10,7 @@ Personal baseball edge toolkit for Android. Kotlin + Jetpack Compose, Material 3
 | --- | --- | --- | --- |
 | **Projected Starters** | Probables, venue, weather, K outlook, pred vs actual | — | Statcast CSW/SwStr |
 | **Daily HR Probability** | Day’s batters (posted lineups, else active roster hitters), season HR%/ISO/FB, park table, weather hydrate, opposing SP HR/9, platoon | — | Statcast barrel/xHR |
-| **DFS Lineups** | Same projections → expected FanDuel points; optimizer (P, C/1B, 2B, 3B, SS, OF×3, UTIL, $35k, Cash/GPP, 5 lineups) | **Salaries** if you want real FanDuel prices | Live FanDuel salary feed |
+| **DFS Lineups** | Same projections → expected FanDuel points; **Choose slate** (Main / Early / Late / Showdown); optimizer (classic $35k) | **Salaries** if you want real FanDuel prices (`api.fanduel.com/fixture-lists` is 401 without login) | Live FanDuel salaries labeled as live |
 | **Underdog Props** | Model Ks / HR 0.5 / hits probabilities | **Lines + odds** if you want edge vs a book | Live Underdog odds |
 
 ### Daily HR formula (implemented)
@@ -26,14 +26,18 @@ Personal baseball edge toolkit for Android. Kotlin + Jetpack Compose, Material 3
 
 Date nav matches starters (◀ / date chip / ▶ / Today). Failure = error + **Retry**, no mock list.
 
-### DFS salaries
+### DFS salaries and Choose slate
 
-There is **no live FanDuel scrape**. Default board uses **EXAMPLE** salaries derived from our projection ranks (labeled on screen). You can:
+We call `GET https://api.fanduel.com/fixture-lists` (the JSON unofficial FD clients use). **Without a FanDuel login it returns 401.** We do not scrape HTML or invent live FanDuel prices.
 
-- **Import slate / paste** CSV: `name,team,pos,salary[,proj][,mlbId]`
-- **Load EXAMPLE file** `app/src/main/assets/example_fd_slate.csv` (also labeled EXAMPLE)
+**Choose slate** then lists **MLB-derived** FanDuel-style pools for the day:
 
-The optimizer always runs on whatever slate is loaded. Regenerate / Export CSV / Copy lineup are real.
+- **Main** — all of that date’s games
+- **Early** — first pitch before 5pm America/Los_Angeles (hidden if every game is late)
+- **Late** — evening games
+- **Showdown** — one slate per game (classic 9-spot on that pool, **not** FanDuel MVP Showdown scoring)
+
+Default salaries are labeled **EXAMPLE** (projection-rank formula or the bundled file). Import CSV `name,team,pos,salary[,proj][,mlbId]` to run the optimizer on real prices you paste. If FanDuel ever returns fixture-lists without auth, those rows are tagged `FanDuel live`.
 
 FanDuel MLB points used: hitters 1B 3 · 2B 6 · 3B 9 · HR 12 · RBI 3.5 · R 3.2 · BB 3 · SB 6; pitchers W 6 · QS 4 · ER −3 · SO 3 · IP 3.
 
@@ -54,7 +58,7 @@ There is **no Underdog API**. Default is a **Model board** (our lines/probs only
 
 `dist/PablitosSportsbook-debug.apk`
 
-On Android 8+: allow **Install unknown apps**, then install. GitHub release **v0.1.3-debug** publishes the same file as `PablitosSportsbook-debug.apk`.
+On Android 8+: allow **Install unknown apps**, then install. GitHub release **v0.1.4-debug** publishes the same file as `PablitosSportsbook-debug.apk`.
 
 ## Open in Android Studio
 

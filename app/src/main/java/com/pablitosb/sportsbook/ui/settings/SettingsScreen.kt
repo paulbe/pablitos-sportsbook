@@ -34,7 +34,7 @@ fun SettingsScreen(onBack: () -> Unit) {
         "MLB feed" to "statsapi.mlb.com — starters, HR, DFS proj, props model",
         "FanDuel salaries" to "EXAMPLE formula / import — not live FD",
         "Underdog lines" to "Model board / import — not live UD",
-        "Version" to "1.3.0 (v0.1.3-debug)",
+        "Version" to "1.4.0 (v0.1.4-debug)",
     )
     Column(
         modifier = Modifier

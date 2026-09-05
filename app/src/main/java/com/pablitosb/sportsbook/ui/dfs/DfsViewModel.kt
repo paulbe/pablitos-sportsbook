@@ -26,14 +26,17 @@ sealed interface DfsUiState {
         val fetchedAt: Instant,
         val message: String,
         val sourceLabel: String,
+        val board: DfsBoard? = null,
     ) : DfsUiState
     data class Error(val slateDate: LocalDate, val message: String) : DfsUiState
 }
 
+/** Application-only constructor so the default AndroidViewModel factory can instantiate us. */
 class DfsViewModel(
     app: Application,
-    private val repository: DfsRepository = DfsRepository(),
 ) : AndroidViewModel(app) {
+
+    private val repository = DfsRepository()
 
     val today: LocalDate get() = LocalDate.now(StartersRepository.SLATE_ZONE)
     val minDate: LocalDate
@@ -58,6 +61,8 @@ class DfsViewModel(
         private set
     var useExampleFile by mutableStateOf(false)
         private set
+    var selectedSlateId by mutableStateOf("main")
+        private set
     var ui by mutableStateOf<DfsUiState>(DfsUiState.Loading(today))
         private set
     var refreshing by mutableStateOf(false)
@@ -73,12 +78,19 @@ class DfsViewModel(
     fun goToday() = goTo(today)
     fun goTo(date: LocalDate) {
         selectedDate = date.coerceIn(minDate, maxDate)
+        selectedSlateId = "main"
         refresh(initial = true)
     }
 
     fun selectContest(type: ContestType) {
         contest = type
         refresh()
+    }
+
+    fun selectSlate(id: String) {
+        selectedSlateId = id
+        currentLineupIndex = 0
+        refresh(initial = true)
     }
 
     fun cycleStack() {
@@ -99,6 +111,7 @@ class DfsViewModel(
     fun applyImport(text: String) {
         importedText = text
         useExampleFile = false
+        selectedSlateId = "imported"
         refresh(initial = true)
     }
 
@@ -111,6 +124,7 @@ class DfsViewModel(
     fun clearImport() {
         importedText = null
         useExampleFile = false
+        if (selectedSlateId == "imported") selectedSlateId = "main"
         refresh(initial = true)
     }
 
@@ -125,7 +139,7 @@ class DfsViewModel(
 
     fun copyCurrent(index: Int): String {
         val ready = ui as? DfsUiState.Ready ?: return ""
-        val lineup = ready.board.lineups.getOrNull(index) ?: return ""
+        val lineup = ready.board.lineups.getOrNull(index.coerceAtLeast(0)) ?: return ""
         return repository.copyLineup(lineup)
     }
 
@@ -145,25 +159,11 @@ class DfsViewModel(
                     seed = seed,
                     importedText = importedText,
                     exampleFileText = example,
+                    selectedSlateId = selectedSlateId,
                     force = !initial,
                 )
-                when {
-                    board.lineups.isNotEmpty() -> DfsUiState.Ready(board)
-                    board.optimizeError != null && board.pool.isNotEmpty() ->
-                        DfsUiState.Empty(
-                            slateDate = board.slate.slateDate,
-                            fetchedAt = board.slate.fetchedAt,
-                            message = board.optimizeError,
-                            sourceLabel = board.salaryNote,
-                        )
-                    else -> DfsUiState.Empty(
-                        slateDate = board.slate.slateDate,
-                        fetchedAt = board.slate.fetchedAt,
-                        message = board.slate.emptyReason
-                            ?: "No DFS pool for $slate.",
-                        sourceLabel = board.slate.sourceLabel,
-                    )
-                }
+                selectedSlateId = board.selectedSlateId
+                DfsUiState.Ready(board)
             } catch (_: CancellationException) {
                 throw CancellationException()
             } catch (e: SlateLoadException) {

@@ -152,9 +152,10 @@ object DfsOptimizer {
 
         val players = FdScoring.SLOTS.map { slot ->
             val player = when (slot) {
-                "OF" -> picked.entries.first { it.key.startsWith("OF") }.also { picked.remove(it.key) }.value
-                else -> picked.remove(slot) ?: picked.entries.first { it.key.startsWith(slot) }.also { picked.remove(it.key) }.value
-            }
+                "OF" -> picked.entries.firstOrNull { it.key.startsWith("OF") }?.also { picked.remove(it.key) }?.value
+                else -> picked.remove(slot)
+                    ?: picked.entries.firstOrNull { it.key.startsWith(slot) }?.also { picked.remove(it.key) }?.value
+            } ?: return null
             DfsPlayer(slot, player.name, player.salary, player.proj, player.team, player.mlbId)
         }
         val proj = players.sumOf { it.proj.toDouble() }.toFloat()
