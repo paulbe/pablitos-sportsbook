@@ -1,10 +1,13 @@
 package com.pablitosb.sportsbook.data.starters
 
+import com.pablitosb.sportsbook.data.mlb.ParkSites
 import com.pablitosb.sportsbook.data.model.Starter
 import com.pablitosb.sportsbook.data.model.Weather
 import com.pablitosb.sportsbook.data.remote.MlbStatsClient
+import com.pablitosb.sportsbook.data.remote.OpenMeteoClient
 import com.pablitosb.sportsbook.data.remote.SavantExpectedClient
 import com.pablitosb.sportsbook.data.remote.optArr
+import com.pablitosb.sportsbook.data.remote.optDoubleOrNull
 import com.pablitosb.sportsbook.data.remote.optFloatish
 import com.pablitosb.sportsbook.data.remote.optIntOrNull
 import com.pablitosb.sportsbook.data.remote.optObj
@@ -42,6 +45,7 @@ class StartersLoadException(message: String, cause: Throwable? = null) : Excepti
 class StartersRepository(
     private val api: MlbStatsClient = MlbStatsClient(),
     private val savant: SavantExpectedClient = SavantExpectedClient(),
+    private val weatherApi: OpenMeteoClient = OpenMeteoClient(),
     private val zone: ZoneId = SLATE_ZONE,
 ) {
     suspend fun loadToday(): StartersBoard = load(LocalDate.now(zone))
@@ -162,9 +166,10 @@ class StartersRepository(
         resultsMode: Boolean,
     ): List<RawStarter> {
         val json = api.getJson(
-            "/api/v1/schedule?sportId=1&date=$slate&hydrate=probablePitcher,venue,weather",
+            "/api/v1/schedule?sportId=1&date=$slate&hydrate=probablePitcher,venue(location),weather",
         )
         val games = json.optArr("dates").toObjList().flatMap { it.optArr("games").toObjList() }
+        val forecastByGame = fetchForecasts(games, slate)
         val rows = mutableListOf<RawStarter>()
         for (game in games) {
             val status = game.optObj("status")
@@ -174,15 +179,19 @@ class StartersRepository(
                 detailed.contains("Cancelled", ignoreCase = true) ||
                 detailed.contains("Canceled", ignoreCase = true) ||
                 detailed.contains("Suspended", ignoreCase = true)
-            val venue = game.optObj("venue")?.optString("name").orEmpty()
+            val venueObj = game.optObj("venue")
+            val venue = venueObj?.optString("name").orEmpty()
+            val venueId = venueObj?.optIntOrNull("id")
             val weatherObj = game.optObj("weather")
-            val wx = ParkWeather.parse(
+            val mlbWx = ParkWeather.parse(
                 condition = weatherObj?.optString("condition").orEmpty(),
                 tempRaw = weatherObj?.optString("temp").orEmpty(),
                 windRaw = weatherObj?.optString("wind").orEmpty(),
             )
-            val gameTime = formatGameTime(game.optString("gameDate"))
             val gamePk = game.optIntOrNull("gamePk")
+            val indoor = ParkSites.isIndoor(ParkSites.roof(venueId, venue), mlbWx.condition)
+            val wx = ParkWeather.resolve(forecastByGame[gamePk], mlbWx, indoor)
+            val gameTime = formatGameTime(game.optString("gameDate"))
             val teams = game.optObj("teams") ?: continue
             val home = teams.optObj("home")
             val away = teams.optObj("away")
@@ -202,6 +211,51 @@ class StartersRepository(
         }
         return rows.distinctBy { Triple(it.mlbId, it.gameTimeLabel, it.homeAway) }
     }
+
+    private suspend fun fetchForecasts(
+        games: List<JSONObject>,
+        slate: LocalDate,
+    ): Map<Int, ParkWeather.Snapshot> = coroutineScope {
+        val gate = Semaphore(4)
+        games.mapNotNull { game ->
+            val gamePk = game.optIntOrNull("gamePk") ?: return@mapNotNull null
+            val venue = game.optObj("venue")
+            val venueId = venue?.optIntOrNull("id")
+            val venueName = venue?.optString("name").orEmpty()
+            val loc = venue?.optObj("location")
+            val coords = loc?.optObj("defaultCoordinates")
+            val fallback = ParkSites.get(venueId)
+            val lat = coords?.optDoubleOrNull("latitude") ?: fallback?.lat
+            val lon = coords?.optDoubleOrNull("longitude") ?: fallback?.lon
+            if (lat == null || lon == null) return@mapNotNull null
+            val bearing = loc?.optFloatish("azimuthAngle") ?: fallback?.cfBearingDeg
+            val mlbCondition = game.optObj("weather")?.optString("condition").orEmpty()
+            val indoor = ParkSites.isIndoor(ParkSites.roof(venueId, venueName), mlbCondition)
+            val at = parseGameInstant(game.optString("gameDate"))
+                ?: slate.atTime(19, 0).atZone(zone).toInstant()
+            async {
+                gate.withPermit {
+                    val hour = runCatching { weatherApi.hourAt(lat, lon, at, slate) }.getOrNull()
+                    val snap = hour?.let {
+                        ParkWeather.fromForecast(
+                            tempF = it.tempF,
+                            windMph = it.windMph,
+                            windFromDeg = it.windFromDeg,
+                            precipPct = it.precipPct,
+                            weatherCode = it.weatherCode,
+                            cfBearingDeg = bearing,
+                            indoor = indoor,
+                            mlbCondition = mlbCondition,
+                        )
+                    }
+                    gamePk to snap
+                }
+            }
+        }.awaitAll().mapNotNull { (pk, snap) -> snap?.let { pk to it } }.toMap()
+    }
+
+    private fun parseGameInstant(iso: String): Instant? =
+        if (iso.isBlank()) null else runCatching { Instant.parse(iso) }.getOrNull()
 
     private fun loadBoxStarters(gamePk: Int): Map<String, BoxStarter> {
         val box = api.getJson("/api/v1/game/$gamePk/boxscore")

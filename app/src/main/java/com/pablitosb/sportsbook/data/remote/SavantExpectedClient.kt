@@ -53,7 +53,7 @@ class SavantExpectedClient(
     }
 
     companion object {
-        const val USER_AGENT = "PablitosSportsbook/1.5 (personal; Android)"
+        const val USER_AGENT = "PablitosSportsbook/1.6 (personal; Android)"
         val client: OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(25, TimeUnit.SECONDS)

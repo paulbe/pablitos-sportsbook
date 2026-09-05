@@ -33,9 +33,10 @@ fun SettingsScreen(onBack: () -> Unit) {
         "Slate timezone" to "America/Los_Angeles",
         "MLB feed" to "statsapi.mlb.com — starters, HR, DFS proj, props model",
         "Savant xwOBA" to "Public expected-stats CSV · missing row shows —",
+        "Park weather" to "Open-Meteo hourly at park lat/long · no API key",
         "FanDuel salaries" to "EXAMPLE formula / import — not live FD",
         "Underdog lines" to "Model board / import — not live UD",
-        "Version" to "1.5.0 (v0.1.5-debug)",
+        "Version" to "1.6.0 (v0.1.6-debug)",
     )
     Column(
         modifier = Modifier
@@ -67,7 +68,7 @@ fun SettingsScreen(onBack: () -> Unit) {
         }
         Spacer(Modifier.height(16.dp))
         Text(
-            "Pitcher xwOBA is season-to-date Savant expected wOBA against (missing row = —). Barrels, live FanDuel prices, and an Underdog login feed are not in this build.",
+            "Starters weather is Open-Meteo at each park (MLB hydrate is backup). Pitcher xwOBA is season-to-date Savant expected wOBA against (missing row = —).",
             color = AccentGreen,
             fontSize = 12.sp,
         )

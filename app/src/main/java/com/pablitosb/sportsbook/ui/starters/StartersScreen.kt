@@ -315,8 +315,9 @@ private fun ReadyList(state: StartersUiState.Ready) {
                 } else {
                     "Outlook = quality (proj K% vs 22.5% lg) + last-5-GS vs season K% trajectory. " +
                         "Proj K% blends recent K%, season K%, and strike%. Proj Ks ≈ proj K% × expected BF. " +
-                        "Wind is vs this park (In/Out CF/LF/RF or L→R / R→L), not compass north. " +
-                        "Use ◀ ▶ or the date chip to jump days."
+                        "Wind/temp/precip are Open-Meteo at the park lat/long for first pitch, rotated by " +
+                        "MLB CF azimuth (In/Out CF/LF/RF or L→R / R→L). Domes / closed roofs ignore outdoor wind. " +
+                        "Fetch failure is Neutral / —. Use ◀ ▶ or the date chip to jump days."
                 },
                 color = AccentGreen,
                 fontSize = 11.sp,

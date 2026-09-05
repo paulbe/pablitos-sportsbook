@@ -8,7 +8,7 @@ Personal baseball edge toolkit for Android. Kotlin + Jetpack Compose, Material 3
 
 | Screen | Live from MLB | You must import | Never claimed live |
 | --- | --- | --- | --- |
-| **Projected Starters** | Probables, venue, park-relative wind, K outlook, pred vs actual, Savant xwOBA | — | CSW / SwStr / invented weather |
+| **Projected Starters** | Probables, venue, Open-Meteo park weather, K outlook, pred vs actual, Savant xwOBA | — | CSW / SwStr / invented weather |
 | **Daily HR Probability** | Day’s batters (posted lineups, else active roster hitters), season HR%/ISO/FB, park table, weather hydrate, opposing SP HR/9, platoon | — | Statcast barrel/xHR |
 | **DFS Lineups** | Same projections → expected FanDuel points; **Choose slate** (Main / Early / Late / Showdown); optimizer (classic $35k) | **Salaries** if you want real FanDuel prices (`api.fanduel.com/fixture-lists` is 401 without login) | Live FanDuel salaries labeled as live |
 | **Underdog Props** | Model Ks / HR 0.5 / hits probabilities | **Lines + odds** if you want edge vs a book | Live Underdog odds |
@@ -58,7 +58,7 @@ There is **no Underdog API**. Default is a **Model board** (our lines/probs only
 
 `dist/PablitosSportsbook-debug.apk`
 
-On Android 8+: allow **Install unknown apps**, then install. GitHub release **v0.1.5-debug** publishes the same file as `PablitosSportsbook-debug.apk`.
+On Android 8+: allow **Install unknown apps**, then install. GitHub release **v0.1.6-debug** publishes the same file as `PablitosSportsbook-debug.apk`.
 
 ## Open in Android Studio
 
@@ -89,13 +89,16 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`.
 | Hands / names | `GET /api/v1/people?personIds=…` |
 | SP game logs (K outlook) | `GET /api/v1/people/{id}/stats?stats=season,gameLog&group=pitching&season=YYYY` |
 | Pitcher xwOBA against | Baseball Savant `expected_statistics?type=pitcher&year=YYYY&min=1&csv=true` (`est_woba`) |
+| Park lat/long + CF azimuth | Schedule `hydrate=venue(location)` (`defaultCoordinates`, `azimuthAngle`) |
+| Hourly temp / wind / precip | Open-Meteo forecast (no key); archive API for older slates |
 
 ## Limits
 
 - MLB may omit tomorrow’s probables or today’s lineups until posted — we then use roster hitters, not fake stars.
 - Park factors are a static table, not a live Statcast park feed.
-- Weather is whatever the schedule hydrate includes. MLB often leaves `weather: {}` until near first pitch — we show Neutral / “Wind n/a”, never invented wind.
-- Wind tags are park-relative heuristics (`ParkWeather`): RAIN RISK from rain/delay text or precip %; HR WEATHER if wind out ≥6 mph or temp ≥82°F (roof open); PITCHER WX if wind in ≥6 mph and temp ≤72 dry, or a closed roof/dome; else Neutral.
+- Starters weather is **Open-Meteo** at the park lat/long for first-pitch hour, rotated by MLB CF `azimuthAngle`. MLB schedule hydrate is a backup only (often empty until near first pitch). Fetch failure → Neutral / —, never invented wind.
+- Wind tags (`ParkWeather`): RAIN RISK from precip ≥40% (or rain WMO + ≥25% / storm); HR WEATHER if wind out ≥6 mph or temp ≥82°F (roof open); PITCHER WX if wind in ≥6 mph and temp ≤72 dry, or a closed roof/dome; else Neutral.
+- Fixed domes are always indoor. Retractable roofs are outdoor unless MLB says the roof is closed.
 - xwOBA is season-to-date Statcast expected wOBA against (`est_woba`). Fetch failure or a missing pitcher is **—**, never a made-up number.
 - EXAMPLE DFS salaries are a transparent formula, not FanDuel.
 - No Underdog / FanDuel login. Import if you have a real slate or lines.
@@ -105,7 +108,8 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`.
 
 ```
 app/src/main/java/com/pablitosb/sportsbook/
-  data/remote/       MLB Stats API + Savant expected-stats CSV
+  data/remote/       MLB Stats API + Savant CSV + Open-Meteo
+  data/mlb/          Park HR factors + roof / lat-long fallbacks
   data/starters/     Option 1 outlook + park-relative wind tags
   data/hr/           HR probability model
   data/projections/  Shared live slate (hitters + SPs + FD points)

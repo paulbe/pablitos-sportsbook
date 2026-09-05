@@ -29,7 +29,7 @@ class MlbStatsClient(
 
     companion object {
         const val BASE = "https://statsapi.mlb.com"
-        const val USER_AGENT = "PablitosSportsbook/1.5 (personal; Android)"
+        const val USER_AGENT = "PablitosSportsbook/1.6 (personal; Android)"
 
         val defaultClient: OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
@@ -67,6 +67,24 @@ internal fun JSONObject.optFloatish(key: String): Float? {
     return when (val raw = opt(key)) {
         is Number -> raw.toFloat()
         is String -> raw.replace("%", "").toFloatOrNull()
+        else -> null
+    }
+}
+
+internal fun JSONObject.optDoubleOrNull(key: String): Double? {
+    if (!has(key) || isNull(key)) return null
+    return when (val raw = opt(key)) {
+        is Number -> raw.toDouble()
+        is String -> raw.toDoubleOrNull()
+        else -> null
+    }
+}
+
+internal fun JSONArray.optNumberAt(index: Int): Double? {
+    if (index < 0 || index >= length() || isNull(index)) return null
+    return when (val raw = opt(index)) {
+        is Number -> raw.toDouble()
+        is String -> raw.toDoubleOrNull()
         else -> null
     }
 }
