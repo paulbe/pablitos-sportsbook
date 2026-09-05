@@ -90,6 +90,7 @@ The bundled EXAMPLE file uses the same schema.
 - Timezone for “today”: **America/Los_Angeles**.
 - Top Picks FD value uses EXAMPLE salaries (same as Option 5) unless a CSV was imported there.
 - Proj TB is not Statcast xTB — season rates plus the existing park/pitcher/weather stack.
+- TB is an Option 6 formula only. There is no standalone Total Bases home tile.
 
 ## Option 1 weather (unchanged)
 
