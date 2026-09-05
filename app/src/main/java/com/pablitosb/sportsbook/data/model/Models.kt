@@ -24,9 +24,21 @@ data class Starter(
     val ksDelta: Float? = null,
     val kPctDelta: Float? = null,
     val resultNote: String = "",
+    val windLabel: String = "",
+    val windRel: WindRel = WindRel.UNKNOWN,
+    val windMph: Int? = null,
+    val wxTag: WxTag = WxTag.NEUTRAL,
+    val precipPct: Int? = null,
+    val weatherCondition: String = "",
+    val xwoba: Float? = null,
+    val ace: Boolean = false,
 )
 
-enum class Weather { SUN, CLOUD }
+enum class Weather { SUN, CLOUD, RAIN }
+
+enum class WindRel { IN_CF, IN_LF, IN_RF, OUT_CF, OUT_LF, OUT_RF, CROSS_LR, CROSS_RL, NONE, UNKNOWN }
+
+enum class WxTag { RAIN_RISK, HR_WEATHER, PITCHER_WX, NEUTRAL }
 
 data class HrBatter(
     val rank: Int,

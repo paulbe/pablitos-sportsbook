@@ -30,7 +30,11 @@ import com.pablitosb.sportsbook.ui.components.ScreenTopBar
 @Composable
 fun ModelsScreen(onBack: () -> Unit) {
     val cards = listOf(
-        Triple("SP Progression", "Stuff + command trajectory vs expected K%", "Ranks today's starters PROG → REG"),
+        Triple(
+            "SP Progression",
+            "Outlook + Proj Ks + park-relative wind + Statcast xwOBA",
+            "Ranks today's starters PROG → REG",
+        ),
         Triple("Game HR", "Talent × park × weather × pitcher × platoon", "Daily home-run probability board"),
         Triple("DFS Optimizer", "FanDuel salary, stacks, and ownership levers", "Builds 5 Cash / GPP lineups"),
         Triple("Prop Edge", "Model win% minus Underdog implied%", "Higher / Lower edges with confidence"),

@@ -3,6 +3,7 @@ package com.pablitosb.sportsbook.data.starters
 import com.pablitosb.sportsbook.data.model.Starter
 import com.pablitosb.sportsbook.data.model.Weather
 import com.pablitosb.sportsbook.data.remote.MlbStatsClient
+import com.pablitosb.sportsbook.data.remote.SavantExpectedClient
 import com.pablitosb.sportsbook.data.remote.optArr
 import com.pablitosb.sportsbook.data.remote.optFloatish
 import com.pablitosb.sportsbook.data.remote.optIntOrNull
@@ -40,6 +41,7 @@ class StartersLoadException(message: String, cause: Throwable? = null) : Excepti
 
 class StartersRepository(
     private val api: MlbStatsClient = MlbStatsClient(),
+    private val savant: SavantExpectedClient = SavantExpectedClient(),
     private val zone: ZoneId = SLATE_ZONE,
 ) {
     suspend fun loadToday(): StartersBoard = load(LocalDate.now(zone))
@@ -80,6 +82,7 @@ class StartersRepository(
             )
         }
         val logsById = fetchGameLogs(usable.map { it.mlbId }, slate.year)
+        val xwobaById = runCatching { savant.pitcherXwoba(slate.year) }.getOrDefault(emptyMap())
         val projected = usable.map { row ->
             val sample = sampleAsOf(logsById[row.mlbId].orEmpty(), slate)
             val projection = OutlookCalculator.project(sample)
@@ -123,6 +126,14 @@ class StartersRepository(
                 ksDelta = actualKs?.let { it - predKs },
                 kPctDelta = actualKPct?.let { it - predKPct },
                 resultNote = row.resultNote,
+                windLabel = row.wx.windLabel,
+                windRel = row.wx.windRel,
+                windMph = row.wx.windMph,
+                wxTag = row.wx.tag,
+                precipPct = row.wx.precipPct,
+                weatherCondition = row.wx.condition,
+                xwoba = xwobaById[row.mlbId],
+                ace = projection.outlookScore >= 8 || predKPct >= 28f,
             )
         }
         StartersBoard(
@@ -165,15 +176,11 @@ class StartersRepository(
                 detailed.contains("Suspended", ignoreCase = true)
             val venue = game.optObj("venue")?.optString("name").orEmpty()
             val weatherObj = game.optObj("weather")
-            val condition = weatherObj?.optString("condition").orEmpty()
-            val temp = weatherObj?.optString("temp")?.toIntOrNull() ?: 0
-            val weather = if (condition.contains("sun", ignoreCase = true) ||
-                condition.contains("clear", ignoreCase = true)
-            ) {
-                Weather.SUN
-            } else {
-                Weather.CLOUD
-            }
+            val wx = ParkWeather.parse(
+                condition = weatherObj?.optString("condition").orEmpty(),
+                tempRaw = weatherObj?.optString("temp").orEmpty(),
+                windRaw = weatherObj?.optString("wind").orEmpty(),
+            )
             val gameTime = formatGameTime(game.optString("gameDate"))
             val gamePk = game.optIntOrNull("gamePk")
             val teams = game.optObj("teams") ?: continue
@@ -190,8 +197,8 @@ class StartersRepository(
                 emptyMap()
             }
 
-            addPitcher(rows, away, awayAbbr, homeAbbr, venue, weather, temp, gameTime, "away", postponed, box)
-            addPitcher(rows, home, homeAbbr, awayAbbr, venue, weather, temp, gameTime, "home", postponed, box)
+            addPitcher(rows, away, awayAbbr, homeAbbr, venue, wx, gameTime, "away", postponed, box)
+            addPitcher(rows, home, homeAbbr, awayAbbr, venue, wx, gameTime, "home", postponed, box)
         }
         return rows.distinctBy { Triple(it.mlbId, it.gameTimeLabel, it.homeAway) }
     }
@@ -226,8 +233,7 @@ class StartersRepository(
         team: String,
         opponent: String,
         venue: String,
-        weather: Weather,
-        tempF: Int,
+        wx: ParkWeather.Snapshot,
         gameTime: String,
         homeAway: String,
         postponed: Boolean,
@@ -251,8 +257,9 @@ class StartersRepository(
             team = team,
             opponent = opponent,
             venue = venue.ifBlank { "TBD" },
-            weather = weather,
-            tempF = tempF,
+            weather = wx.icon,
+            tempF = wx.tempF,
+            wx = wx,
             gameTimeLabel = gameTime,
             homeAway = homeAway,
             postponed = postponed,
@@ -341,6 +348,7 @@ class StartersRepository(
         val venue: String,
         val weather: Weather,
         val tempF: Int,
+        val wx: ParkWeather.Snapshot = ParkWeather.parse("", "", ""),
         val gameTimeLabel: String,
         val homeAway: String,
         val postponed: Boolean = false,

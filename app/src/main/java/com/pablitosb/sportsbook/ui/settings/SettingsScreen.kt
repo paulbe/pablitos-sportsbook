@@ -32,9 +32,10 @@ fun SettingsScreen(onBack: () -> Unit) {
         "Theme" to "Dark navy + green (locked)",
         "Slate timezone" to "America/Los_Angeles",
         "MLB feed" to "statsapi.mlb.com — starters, HR, DFS proj, props model",
+        "Savant xwOBA" to "Public expected-stats CSV · missing row shows —",
         "FanDuel salaries" to "EXAMPLE formula / import — not live FD",
         "Underdog lines" to "Model board / import — not live UD",
-        "Version" to "1.4.0 (v0.1.4-debug)",
+        "Version" to "1.5.0 (v0.1.5-debug)",
     )
     Column(
         modifier = Modifier
@@ -66,7 +67,7 @@ fun SettingsScreen(onBack: () -> Unit) {
         }
         Spacer(Modifier.height(16.dp))
         Text(
-            "Statcast barrels, live FanDuel prices, and an Underdog login feed are not in this build. Import a slate or lines if you have them.",
+            "Pitcher xwOBA is season-to-date Savant expected wOBA against (missing row = —). Barrels, live FanDuel prices, and an Underdog login feed are not in this build.",
             color = AccentGreen,
             fontSize = 12.sp,
         )

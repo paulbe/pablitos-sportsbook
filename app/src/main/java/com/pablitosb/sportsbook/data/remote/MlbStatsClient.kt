@@ -29,7 +29,7 @@ class MlbStatsClient(
 
     companion object {
         const val BASE = "https://statsapi.mlb.com"
-        const val USER_AGENT = "PablitosSportsbook/1.1 (personal; Android)"
+        const val USER_AGENT = "PablitosSportsbook/1.5 (personal; Android)"
 
         val defaultClient: OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
