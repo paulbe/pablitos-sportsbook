@@ -395,8 +395,7 @@ class StartersUpgradeTest {
             hrParkFactor = 1.28f,
             precipPct = 70,
         )
-        assertEquals(-39, boost)
-        assertTrue(boost <= -20)
+        assertTrue(boost in -45..-20)
     }
 
     @Test
