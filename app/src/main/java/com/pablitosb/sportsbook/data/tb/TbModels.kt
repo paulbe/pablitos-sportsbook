@@ -2,9 +2,6 @@ package com.pablitosb.sportsbook.data.tb
 
 import com.pablitosb.sportsbook.data.model.Weather
 import com.pablitosb.sportsbook.data.projections.HitterProjection
-import com.pablitosb.sportsbook.data.projections.ProjectionBoard
-import java.time.Instant
-import java.time.LocalDate
 
 enum class TbSort { PROJ_TB, TB_PA, SLG }
 
@@ -29,14 +26,6 @@ data class TbBatter(
     val parkAdjPct: Int,
     val pitcherAdjPct: Int,
     val gameHrPct: Float,
-)
-
-data class TbBoard(
-    val slateDate: LocalDate,
-    val fetchedAt: Instant,
-    val sourceLabel: String,
-    val batters: List<TbBatter>,
-    val emptyReason: String? = null,
 )
 
 object TbSorter {
@@ -77,35 +66,5 @@ object TbSorter {
                     gameHrPct = h.gameHrProb * 100f,
                 )
             }
-    }
-}
-
-class TbRepository(
-    private val projections: com.pablitosb.sportsbook.data.projections.ProjectionService =
-        com.pablitosb.sportsbook.data.projections.ProjectionService.shared,
-) {
-    suspend fun load(date: LocalDate, force: Boolean = false): TbBoard {
-        val slate: ProjectionBoard = try {
-            projections.load(date, force)
-        } catch (e: com.pablitosb.sportsbook.data.projections.SlateLoadException) {
-            throw e
-        } catch (e: Exception) {
-            throw com.pablitosb.sportsbook.data.projections.SlateLoadException(
-                "Couldn’t build the total-bases board for $date.",
-                e,
-            )
-        }
-        val batters = TbSorter.fromHitters(slate.hitters)
-        return TbBoard(
-            slateDate = slate.slateDate,
-            fetchedAt = slate.fetchedAt,
-            sourceLabel = slate.sourceLabel,
-            batters = batters,
-            emptyReason = if (batters.isEmpty()) {
-                slate.emptyReason ?: "No hitters available for $date. Lineups may not be posted yet."
-            } else {
-                null
-            },
-        )
     }
 }

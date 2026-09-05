@@ -2,7 +2,7 @@
 
 Android app for **today’s MLB slate** — live projected starters, daily HR probability,
 FanDuel classic DFS lineups, a **FanDuel DFS projections board**, an Underdog-style
-props board, **Today’s Top Picks**, and **Total Bases**. Dark navy + green.
+props board, and **Today’s Top Picks** (SP Ks · HR · TB · FD value). Dark navy + green.
 
 ## Home
 
@@ -11,40 +11,29 @@ props board, **Today’s Top Picks**, and **Total Bases**. Dark navy + green.
 3. **DFS Lineups** — FanDuel classic $35k optimizer
 4. **FD DFS Projections** — ranked FanDuel-pts board for a chosen slate
 5. **Underdog Props** — model board + import
-6. **Today’s Top Picks** — best Ks, HRs, FD value, and TB from the live boards
-7. **Total Bases** — expected TB from season hit rates × PA
+6. **Today’s Top Picks** — SP Ks · HR · TB · FD value
 
-Footer: **Models** · **Settings**.
-
-## Option 7 — Total Bases
-
-Ranked live hitter board. Default date is **America/Los_Angeles** today.
-
-```
-TB ≈ PA × (1·1B/PA + 2·2B/PA + 3·3B/PA + 4·HR/PA)
-```
-
-Season 1B/2B/3B/HR rates come from the MLB Stats API and shrink toward league
-priors (80 PA). HR/PA uses the Daily HR `p_PA` (park × weather × pitcher HR/9 ×
-platoon). Doubles/triples get a muted tilt of those multipliers; singles stay
-nearly park-neutral. SLG proxy = (TB/PA) / (AB/PA).
-
-Sort: Proj TB · TB/PA · SLG. Today’s Top Picks includes a **Top TB** section.
-FD DFS Projections show Proj TB as a driver/column for hitters.
+Footer: **Models** · **Settings**. There is no Option 7 home tile.
 
 ## Option 6 — Today’s Top Picks
 
-A daily digest (not a new model). Default date is **America/Los_Angeles** today.
+A daily digest of four live formulas. Default date is **America/Los_Angeles** today.
 
 | Section | How it’s chosen |
 | --- | --- |
 | **Top SP K spots** | Live Projected Starters, rain last, then **Proj Ks**, then outlook |
 | **Top HR spots** | Daily HR Probability, ranked by **game HR%** |
+| **Top TB spots** | Expected total bases: `TB ≈ PA × (1·1B + 2·2B + 3·3B + 4·HR) / PA` |
 | **Top FD value** | FD DFS Projections: **pts/$1k** when salary exists, else Proj FD pts |
-| **Top TB spots** | Total Bases board, ranked by **Proj TB** |
 
-Each pick includes a short **Why** line (outlook + weather boost / park PF / matchup).
-Date nav matches the other boards. Empty slate → Retry, not mock names.
+**TB formula** (Option 6 only — not a standalone home screen): season 1B/2B/3B/HR
+rates from the MLB Stats API, shrunk toward league priors (80 PA). HR/PA uses
+Daily HR `p_PA` (park × weather × pitcher HR/9 × platoon). Doubles/triples get a
+muted tilt; singles stay nearly park-neutral. FD DFS Projections still show
+Proj TB on hitter rows.
+
+Each pick includes a short **Why** line. Date nav matches the other boards.
+Empty slate → Retry, not mock names.
 
 ## Option 5 — FD DFS Projections
 
@@ -60,7 +49,7 @@ pipeline as DFS Lineups.
 | Value | pts per $1k when salary is present |
 | Ceiling | local upside (`× 1.25 + game HR%` hitters / `× 1.35` pitchers) |
 | Own | placeholder `—` (no ownership feed) |
-| Driver | pitcher **Proj Ks**, hitter **HR%** |
+| Driver | pitcher **Proj Ks**, hitter **HR% · Proj TB** |
 
 **Sort:** Proj pts (default) · Value · Salary · Pos. Tap again to reverse.
 

@@ -29,7 +29,6 @@ import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.SportsBaseball
 import androidx.compose.material.icons.outlined.Sports
-import androidx.compose.material.icons.outlined.Timeline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -129,15 +128,8 @@ fun HomeScreen(onOpen: (Dest) -> Unit) {
             HomeTile(
                 icon = Icons.Outlined.EmojiEvents,
                 title = "Today’s Top Picks",
-                subtitle = "Best Ks, HRs, FD value, and TB · today",
+                subtitle = "SP Ks · HR · TB · FD value",
                 onClick = { onOpen(Dest.TopPicks) },
-            )
-            Spacer(Modifier.height(12.dp))
-            HomeTile(
-                icon = Icons.Outlined.Timeline,
-                title = "Total Bases",
-                subtitle = "Live slate · expected TB",
-                onClick = { onOpen(Dest.TotalBases) },
             )
         }
         HomeFooter(

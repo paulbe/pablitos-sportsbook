@@ -7,18 +7,11 @@ import com.pablitosb.sportsbook.data.tb.TbCalculator
 import com.pablitosb.sportsbook.data.tb.TbSort
 import com.pablitosb.sportsbook.data.tb.TbSorter
 import com.pablitosb.sportsbook.data.toppicks.TopPicksSelector
-import com.pablitosb.sportsbook.ui.tb.TbViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TbModelTest {
-
-    @Test
-    fun viewModelHasNoArgConstructor() {
-        val noArg = TbViewModel::class.java.constructors.any { it.parameterCount == 0 }
-        assertTrue(noArg)
-    }
 
     @Test
     fun sluggerProjectsMoreTbThanContactHitter() {

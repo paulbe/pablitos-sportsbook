@@ -174,7 +174,7 @@ private fun ReadyPicks(board: TopPicksBoard, viewModel: TopPicksViewModel) {
             Spacer(Modifier.height(10.dp))
             Text("Today’s Top Picks", color = TextPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Text(
-                "Best live spots from Projected Starters, Daily HR, FD value, and Total Bases.",
+                "Four live formulas: SP Ks · HR · TB · FD value.",
                 color = TextMuted,
                 fontSize = 13.sp,
             )
@@ -184,7 +184,7 @@ private fun ReadyPicks(board: TopPicksBoard, viewModel: TopPicksViewModel) {
                     TopPicksSection.ALL to "All",
                     TopPicksSection.SP_K to "SP Ks",
                     TopPicksSection.HR to "HR",
-                    TopPicksSection.TB to "TB",
+                    TopPicksSection.TB to "Top TB",
                     TopPicksSection.FD_VALUE to "FD value",
                 ),
                 selected = section,
@@ -220,7 +220,7 @@ private fun ReadyPicks(board: TopPicksBoard, viewModel: TopPicksViewModel) {
             item {
                 SectionCard(
                     title = "Top TB spots",
-                    subtitle = "Expected total bases · live rates × PA",
+                    subtitle = "TB ≈ PA × (1·1B + 2·2B + 3·3B + 4·HR) / PA",
                     metricLabel = "PROJ TB",
                     picks = board.tbSpots,
                     empty = board.tbNote,
@@ -249,11 +249,11 @@ private fun ReadyPicks(board: TopPicksBoard, viewModel: TopPicksViewModel) {
                 Icon(Icons.Outlined.Info, null, tint = AccentGreen, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    "K spots rank by Proj Ks (rain last) from live MLB probables. " +
-                        "HR spots are the Daily HR board. TB spots use expected total bases " +
-                        "(1B/2B/3B/HR rates × PA). FD value uses the same FanDuel-point pipeline " +
-                        "as Option 5; salaries are EXAMPLE unless you imported a CSV there. " +
-                        "Not live FanDuel prices. Timezone: America/Los_Angeles.",
+                    "Option 6 formulas — SP Ks: Proj Ks (rain last) from live probables. " +
+                        "HR: Daily HR game%. TB: PA × (1·1B + 2·2B + 3·3B + 4·HR) per PA, " +
+                        "shrunk season rates with park / pitcher / weather. " +
+                        "FD value: FanDuel pts per \$1k (EXAMPLE salaries unless imported). " +
+                        "Timezone: America/Los_Angeles.",
                     color = AccentGreen,
                     fontSize = 11.sp,
                     lineHeight = 15.sp,
