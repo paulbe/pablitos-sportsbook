@@ -73,7 +73,7 @@ fun HomeScreen(onOpen: (Dest) -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 BrandMark(modifier = Modifier.weight(1f))
-                DateChip()
+                DateChip(date = java.time.LocalDate.now(java.time.ZoneId.of("America/Los_Angeles")))
             }
             Spacer(Modifier.height(28.dp))
             BaseballRule()
@@ -91,28 +91,28 @@ fun HomeScreen(onOpen: (Dest) -> Unit) {
             HomeTile(
                 icon = Icons.Outlined.Sports,
                 title = "Projected Starters",
-                subtitle = "Today's SPs ranked PROG → REG",
+                subtitle = "Live MLB probables · PROG → REG",
                 onClick = { onOpen(Dest.Starters) },
             )
             Spacer(Modifier.height(12.dp))
             HomeTile(
                 icon = Icons.Outlined.SportsBaseball,
                 title = "Daily HR Probability",
-                subtitle = "Batters ranked by game HR chance",
+                subtitle = "Live lineups · game HR%",
                 onClick = { onOpen(Dest.HrProb) },
             )
             Spacer(Modifier.height(12.dp))
             HomeTile(
                 icon = Icons.Outlined.Shield,
                 title = "DFS Lineups",
-                subtitle = "5 FanDuel lineups · swipe to browse",
+                subtitle = "Optimizer · EXAMPLE or imported slate",
                 onClick = { onOpen(Dest.Dfs) },
             )
             Spacer(Modifier.height(12.dp))
             HomeTile(
                 icon = Icons.Outlined.GpsFixed,
                 title = "Underdog Props",
-                subtitle = "Best edges · model vs live lines",
+                subtitle = "Model board · import lines for edge",
                 onClick = { onOpen(Dest.Props) },
             )
         }

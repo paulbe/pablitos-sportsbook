@@ -1,0 +1,107 @@
+package com.pablitosb.sportsbook.data.projections
+
+import com.pablitosb.sportsbook.data.model.Outlook
+import com.pablitosb.sportsbook.data.model.Weather
+import java.time.Instant
+import java.time.LocalDate
+
+class SlateLoadException(message: String, cause: Throwable? = null) : Exception(message, cause)
+
+data class SlateGame(
+    val gamePk: Int,
+    val venueId: Int?,
+    val venueName: String,
+    val weather: Weather,
+    val tempF: Int,
+    val wind: String,
+    val weatherFactor: Float,
+    val parkHrFactor: Float,
+    val homeAbbr: String,
+    val awayAbbr: String,
+    val homeId: Int,
+    val awayId: Int,
+    val homePitcherId: Int?,
+    val awayPitcherId: Int?,
+    val homePitcherName: String,
+    val awayPitcherName: String,
+    val postponed: Boolean,
+    val gameTimeLabel: String,
+    val homeLineupPosted: Boolean,
+    val awayLineupPosted: Boolean,
+)
+
+data class HitterProjection(
+    val mlbId: Int,
+    val name: String,
+    val team: String,
+    val opponent: String,
+    val pos: String,
+    val fdSlots: Set<String>,
+    val batSide: String,
+    val battingOrder: Int?,
+    val inPostedLineup: Boolean,
+    val gamePk: Int,
+    val parkName: String,
+    val weather: Weather,
+    val tempF: Int,
+    val opposingPitcherName: String,
+    val opposingPitcherHand: String,
+    val opposingHr9: Float,
+    val seasonPa: Int,
+    val seasonHr: Int,
+    val seasonHits: Int,
+    val seasonDoubles: Int,
+    val seasonTriples: Int,
+    val seasonBb: Int,
+    val seasonSb: Int,
+    val seasonR: Int,
+    val seasonRbi: Int,
+    val seasonAb: Int,
+    val avg: Float,
+    val slg: Float,
+    val expectedPa: Float,
+    val pPa: Float,
+    val gameHrProb: Float,
+    val expectedHr: Float,
+    val expectedHits: Float,
+    val seasonHrPct: Float,
+    val talentGamePct: Int,
+    val parkAdjPct: Int,
+    val pitcherAdjPct: Int,
+    val regressionLean: Boolean,
+    val fdPoints: Float,
+)
+
+data class PitcherProjection(
+    val mlbId: Int,
+    val name: String,
+    val team: String,
+    val opponent: String,
+    val throwsHand: String,
+    val nextStartKs: Float,
+    val projKPct: Float,
+    val expectedIp: Float,
+    val era: Float,
+    val hr9: Float,
+    val seasonHr: Int,
+    val seasonIp: Float,
+    val seasonSo: Int,
+    val seasonBf: Int,
+    val airOuts: Int,
+    val groundOuts: Int,
+    val fdPoints: Float,
+    val outlook: Outlook,
+    val gamePk: Int,
+)
+
+data class ProjectionBoard(
+    val slateDate: LocalDate,
+    val fetchedAt: Instant,
+    val games: List<SlateGame>,
+    val hitters: List<HitterProjection>,
+    val pitchers: List<PitcherProjection>,
+    val sourceLabel: String,
+    val lineupGames: Int,
+    val rosterGames: Int,
+    val emptyReason: String? = null,
+)

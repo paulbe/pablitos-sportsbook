@@ -26,10 +26,22 @@ import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Park
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.WbSunny
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -39,12 +51,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.pablitosb.sportsbook.data.mock.MockRepository
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pablitosb.sportsbook.data.model.HrBatter
 import com.pablitosb.sportsbook.data.model.Weather
+import com.pablitosb.sportsbook.data.starters.StartersRepository
 import com.pablitosb.sportsbook.theme.AccentGreen
 import com.pablitosb.sportsbook.theme.CardFill
-import com.pablitosb.sportsbook.theme.CardStroke
 import com.pablitosb.sportsbook.theme.ChipFill
 import com.pablitosb.sportsbook.theme.MatchupBlue
 import com.pablitosb.sportsbook.theme.NavyBlack
@@ -53,14 +65,32 @@ import com.pablitosb.sportsbook.theme.ParkPurple
 import com.pablitosb.sportsbook.theme.RegRed
 import com.pablitosb.sportsbook.theme.TextMuted
 import com.pablitosb.sportsbook.theme.TextPrimary
-import com.pablitosb.sportsbook.ui.components.DateChip
+import com.pablitosb.sportsbook.ui.components.LiveBadge
 import com.pablitosb.sportsbook.ui.components.PlayerAvatar
 import com.pablitosb.sportsbook.ui.components.ScreenTopBar
 import com.pablitosb.sportsbook.ui.components.SectionRule
+import com.pablitosb.sportsbook.ui.components.SlateDateNavBar
+import com.pablitosb.sportsbook.ui.components.SlateLoading
+import com.pablitosb.sportsbook.ui.components.SlateMessage
+import com.pablitosb.sportsbook.ui.components.updatedLabel
+import java.time.Instant
+import java.time.ZoneOffset
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HrProbabilityScreen(onBack: () -> Unit) {
+fun HrProbabilityScreen(
+    onBack: () -> Unit,
+    viewModel: HrViewModel = viewModel(),
+) {
+    var showPicker by remember { mutableStateOf(false) }
+    val slate = when (val state = viewModel.ui) {
+        is HrUiState.Ready -> state.board.slate.slateDate
+        is HrUiState.Empty -> state.slateDate
+        is HrUiState.Error -> state.slateDate
+        is HrUiState.Loading -> state.slateDate
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -68,58 +98,128 @@ fun HrProbabilityScreen(onBack: () -> Unit) {
             .statusBarsPadding()
             .navigationBarsPadding(),
     ) {
-        ScreenTopBar(onBack = onBack)
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
+        ScreenTopBar(
+            onBack = onBack,
+            trailing = {
+                IconButton(onClick = { viewModel.refresh() }) {
+                    Icon(Icons.Outlined.Refresh, contentDescription = "Refresh", tint = AccentGreen)
+                }
+            },
+        )
+        SlateDateNavBar(
+            date = slate,
+            isToday = slate == viewModel.today,
+            canPrev = slate > viewModel.minDate,
+            canNext = slate < viewModel.maxDate,
+            onPrev = { viewModel.shiftDays(-1) },
+            onNext = { viewModel.shiftDays(1) },
+            onToday = { viewModel.goToday() },
+            onPick = { showPicker = true },
+        )
+        if (showPicker) {
+            val pickerState = rememberDatePickerState(
+                initialSelectedDateMillis = slate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+                yearRange = IntRange(viewModel.minDate.year, viewModel.maxDate.year),
+            )
+            DatePickerDialog(
+                onDismissRequest = { showPicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        pickerState.selectedDateMillis?.let { millis ->
+                            viewModel.goTo(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate())
+                        }
+                        showPicker = false
+                    }) { Text("Go", color = AccentGreen) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showPicker = false }) { Text("Cancel", color = TextMuted) }
+                },
+            ) { DatePicker(state = pickerState) }
+        }
+        PullToRefreshBox(
+            isRefreshing = viewModel.refreshing && viewModel.ui is HrUiState.Ready,
+            onRefresh = { viewModel.refresh() },
+            modifier = Modifier.fillMaxSize(),
         ) {
-            item {
-                Spacer(Modifier.height(8.dp))
-                DateChip()
-                Spacer(Modifier.height(10.dp))
-                Text("Daily HR Probability", color = TextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                Text(
-                    "Ranked by game HR chance • talent × park × pitcher × weather",
-                    color = TextMuted,
-                    fontSize = 13.sp,
+            when (val state = viewModel.ui) {
+                is HrUiState.Loading -> SlateLoading(state.slateDate)
+                is HrUiState.Error -> SlateMessage(
+                    title = "HR board unavailable",
+                    body = state.message,
+                    onRetry = { viewModel.refresh() },
                 )
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    FactorChip("Barrel/xHR talent", Icons.Outlined.BarChart, AccentGreen)
-                    FactorChip("Matchup adj", Icons.Outlined.Balance, MatchupBlue)
-                    FactorChip("Park/Wx", Icons.Outlined.Park, ParkPurple)
-                }
-                Spacer(Modifier.height(14.dp))
-                Row(Modifier.fillMaxWidth()) {
-                    Text("BATTER", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                    Text("GAME HR%", color = AccentGreen, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.width(12.dp))
-                    Text("SEASON", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-                }
-                Spacer(Modifier.height(6.dp))
-                SectionRule()
+                is HrUiState.Empty -> SlateMessage(
+                    title = "No hitters posted",
+                    body = state.message,
+                    onRetry = { viewModel.refresh() },
+                    fetchedAt = state.fetchedAt,
+                    zone = StartersRepository.SLATE_ZONE,
+                    badge = state.sourceLabel,
+                )
+                is HrUiState.Ready -> ReadyList(state.board.slate.sourceLabel, state.board.slate.fetchedAt, state.board.batters)
             }
-            items(MockRepository.hrBatters, key = { it.rank }) { batter ->
-                HrRow(batter)
-                SectionRule()
+        }
+    }
+}
+
+@Composable
+private fun ReadyList(source: String, fetchedAt: java.time.Instant, batters: List<HrBatter>) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+    ) {
+        item {
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LiveBadge(source)
+                Spacer(Modifier.weight(1f))
+                Text(updatedLabel(fetchedAt, StartersRepository.SLATE_ZONE), color = TextMuted, fontSize = 11.sp)
             }
-            item {
-                Spacer(Modifier.height(14.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.Info, null, tint = AccentGreen, modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        "Pr(HR) ≈ talent HR% × park × weather × pitcher × platoon.",
-                        color = AccentGreen,
-                        fontSize = 12.sp,
-                    )
-                }
-                Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(10.dp))
+            Text("Daily HR Probability", color = TextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "Ranked by game HR% • talent × park × weather × pitcher × platoon",
+                color = TextMuted,
+                fontSize = 13.sp,
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FactorChip("HR%/ISO/FB talent", Icons.Outlined.BarChart, AccentGreen)
+                FactorChip("Matchup / platoon", Icons.Outlined.Balance, MatchupBlue)
+                FactorChip("Park / weather", Icons.Outlined.Park, ParkPurple)
             }
+            Spacer(Modifier.height(14.dp))
+            Row(Modifier.fillMaxWidth()) {
+                Text("BATTER", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Text("GAME HR%", color = AccentGreen, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.width(12.dp))
+                Text("SEASON", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(Modifier.height(6.dp))
+            SectionRule()
+        }
+        items(batters, key = { "${it.mlbId}-${it.rank}" }) { batter ->
+            HrRow(batter)
+            SectionRule()
+        }
+        item {
+            Spacer(Modifier.height(14.dp))
+            Row(verticalAlignment = Alignment.Top) {
+                Icon(Icons.Outlined.Info, null, tint = AccentGreen, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    "p_PA = shrink(0.70·HR/PA + 0.20·ISO proxy + 0.10·FB proxy) × park × weather × pitcher HR/9 × platoon. " +
+                        "Pr(HR) = 1 − (1 − p_PA)^PA. No Statcast barrels — ISO/FB from MLB Stats API. " +
+                        "Lineups when posted; otherwise active roster hitters. Network failure shows Retry, not mock names.",
+                    color = AccentGreen,
+                    fontSize = 11.sp,
+                )
+            }
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
@@ -172,6 +272,11 @@ private fun HrRow(batter: HrBatter) {
                     Text("${batter.opponent} ", color = OpponentRed, fontSize = 11.sp)
                     Text(batter.pitcherHand, color = MatchupBlue, fontSize = 11.sp)
                 }
+                val extra = buildList {
+                    if (batter.battingOrder != null) add("#${batter.battingOrder}")
+                    if (batter.sourceNote.isNotBlank()) add(batter.sourceNote)
+                }.joinToString(" · ")
+                if (extra.isNotBlank()) Text(extra, color = TextMuted, fontSize = 10.sp)
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
@@ -181,7 +286,7 @@ private fun HrRow(batter: HrBatter) {
                     fontSize = 22.sp,
                 )
                 Text(
-                    String.format(Locale.US, "%.1f%% szn", batter.seasonHrPct),
+                    String.format(Locale.US, "%.1f%% szn HR/PA", batter.seasonHrPct),
                     color = TextPrimary,
                     fontSize = 11.sp,
                 )
@@ -192,11 +297,8 @@ private fun HrRow(batter: HrBatter) {
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            MiniChip("xHR ${batter.xHrPct}%", AccentGreen)
-            MiniChip(
-                signed(batter.parkAdjPct) + "  ${batter.parkName}",
-                ParkPurple,
-            )
+            MiniChip("talent ${batter.xHrPct}%", AccentGreen)
+            MiniChip(signed(batter.parkAdjPct) + "  ${batter.parkName}", ParkPurple)
             WeatherBit(batter.weather, batter.tempF)
         }
         Spacer(Modifier.height(6.dp))
@@ -240,7 +342,7 @@ private fun WeatherBit(weather: Weather, tempF: Int) {
             modifier = Modifier.size(12.dp),
         )
         Spacer(Modifier.width(4.dp))
-        Text("$tempF°", color = TextMuted, fontSize = 11.sp)
+        Text(if (tempF > 0) "$tempF°" else "—", color = TextMuted, fontSize = 11.sp)
     }
 }
 

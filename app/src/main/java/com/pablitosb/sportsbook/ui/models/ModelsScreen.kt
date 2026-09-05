@@ -48,7 +48,7 @@ fun ModelsScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(8.dp))
             Text("Models", color = TextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Bold)
             Text(
-                "v1 ships calibrated sample outputs. Live Statcast / book feeds are next.",
+                "Live MLB Stats API for talent and matchups. FanDuel / Underdog books are import-only.",
                 color = TextMuted,
                 fontSize = 13.sp,
             )

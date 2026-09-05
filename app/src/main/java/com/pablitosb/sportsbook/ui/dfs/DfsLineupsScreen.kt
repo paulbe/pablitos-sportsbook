@@ -1,5 +1,9 @@
 package com.pablitosb.sportsbook.ui.dfs
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,12 +39,19 @@ import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -55,10 +66,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.pablitosb.sportsbook.data.mock.MockRepository
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pablitosb.sportsbook.data.dfs.SalarySource
 import com.pablitosb.sportsbook.data.model.ContestType
 import com.pablitosb.sportsbook.data.model.DfsLineup
 import com.pablitosb.sportsbook.data.model.LineupKind
+import com.pablitosb.sportsbook.data.starters.StartersRepository
 import com.pablitosb.sportsbook.theme.AccentGreen
 import com.pablitosb.sportsbook.theme.CardFill
 import com.pablitosb.sportsbook.theme.CardStroke
@@ -66,23 +79,36 @@ import com.pablitosb.sportsbook.theme.NavyBlack
 import com.pablitosb.sportsbook.theme.NavySurface
 import com.pablitosb.sportsbook.theme.TextMuted
 import com.pablitosb.sportsbook.theme.TextPrimary
+import com.pablitosb.sportsbook.ui.components.LiveBadge
 import com.pablitosb.sportsbook.ui.components.ScreenTopBar
+import com.pablitosb.sportsbook.ui.components.SlateDateNavBar
+import com.pablitosb.sportsbook.ui.components.SlateLoading
+import com.pablitosb.sportsbook.ui.components.SlateMessage
 import com.pablitosb.sportsbook.ui.components.StubButton
+import java.time.Instant
+import java.time.ZoneOffset
 import java.util.Locale
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DfsLineupsScreen(onBack: () -> Unit) {
+fun DfsLineupsScreen(
+    onBack: () -> Unit,
+    viewModel: DfsViewModel = viewModel(),
+) {
     val context = LocalContext.current
-    val lineups = MockRepository.lineups
-    val pagerState = rememberPagerState(initialPage = 1, pageCount = { lineups.size })
     val scope = rememberCoroutineScope()
-    var contest by remember { mutableStateOf(ContestType.GPP) }
-    var stackDots by remember { mutableIntStateOf(4) }
-    var ownDots by remember { mutableIntStateOf(3) }
+    var showPicker by remember { mutableStateOf(false) }
+    var showImport by remember { mutableStateOf(false) }
+    var paste by remember { mutableStateOf("") }
 
-    fun toast(msg: String) {
-        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+    fun toast(msg: String) = Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+
+    val slate = when (val state = viewModel.ui) {
+        is DfsUiState.Ready -> state.board.slate.slateDate
+        is DfsUiState.Empty -> state.slateDate
+        is DfsUiState.Error -> state.slateDate
+        is DfsUiState.Loading -> state.slateDate
     }
 
     Column(
@@ -92,41 +118,248 @@ fun DfsLineupsScreen(onBack: () -> Unit) {
             .statusBarsPadding()
             .navigationBarsPadding(),
     ) {
-        ScreenTopBar(onBack = onBack)
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-        ) {
-            Spacer(Modifier.height(6.dp))
-            Row(verticalAlignment = Alignment.Top) {
-                Column(Modifier.weight(1f)) {
-                    Text("DFS Lineups", color = TextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                    Text("FanDuel MLB • Main slate", color = AccentGreen, fontSize = 13.sp)
+        ScreenTopBar(
+            onBack = onBack,
+            trailing = {
+                IconButton(onClick = { viewModel.refresh() }) {
+                    Icon(Icons.Outlined.Refresh, contentDescription = "Refresh", tint = AccentGreen)
                 }
-                ContestToggle(contest) { contest = it }
-            }
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                LeverCard(
-                    title = "STACK LEVER",
-                    value = if (stackDots >= 4) "Yankees 4" else "Stack $stackDots",
-                    icon = Icons.Outlined.Layers,
-                    filled = stackDots,
-                    onClick = { stackDots = if (stackDots == 5) 1 else stackDots + 1 },
-                    modifier = Modifier.weight(1f),
+            },
+        )
+        SlateDateNavBar(
+            date = slate,
+            isToday = slate == viewModel.today,
+            canPrev = slate > viewModel.minDate,
+            canNext = slate < viewModel.maxDate,
+            onPrev = { viewModel.shiftDays(-1) },
+            onNext = { viewModel.shiftDays(1) },
+            onToday = { viewModel.goToday() },
+            onPick = { showPicker = true },
+        )
+        if (showPicker) {
+            val pickerState = rememberDatePickerState(
+                initialSelectedDateMillis = slate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+                yearRange = IntRange(viewModel.minDate.year, viewModel.maxDate.year),
+            )
+            DatePickerDialog(
+                onDismissRequest = { showPicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        pickerState.selectedDateMillis?.let { millis ->
+                            viewModel.goTo(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate())
+                        }
+                        showPicker = false
+                    }) { Text("Go", color = AccentGreen) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showPicker = false }) { Text("Cancel", color = TextMuted) }
+                },
+            ) { DatePicker(state = pickerState) }
+        }
+        if (showImport) {
+            AlertDialog(
+                onDismissRequest = { showImport = false },
+                title = { Text("Import slate / salaries") },
+                text = {
+                    Column {
+                        Text(
+                            "Paste CSV: name,team,pos,salary[,proj][,mlbId]. These replace EXAMPLE prices. Not a live FanDuel feed.",
+                            color = TextMuted,
+                            fontSize = 13.sp,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = paste,
+                            onValueChange = { paste = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp),
+                            placeholder = { Text("Aaron Judge,NYY,OF,4500") },
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        if (paste.isBlank()) {
+                            toast("Paste a CSV first, or load the EXAMPLE file.")
+                        } else {
+                            viewModel.applyImport(paste)
+                            showImport = false
+                            toast("Imported salaries — optimizer will use this slate.")
+                        }
+                    }) { Text("Load paste", color = AccentGreen) }
+                },
+                dismissButton = {
+                    Row {
+                        TextButton(onClick = {
+                            viewModel.loadExampleFile()
+                            showImport = false
+                            toast("Loaded EXAMPLE file salaries — not live FanDuel.")
+                        }) { Text("EXAMPLE file", color = AccentGreen) }
+                        TextButton(onClick = { showImport = false }) { Text("Cancel", color = TextMuted) }
+                    }
+                },
+            )
+        }
+        PullToRefreshBox(
+            isRefreshing = viewModel.refreshing && viewModel.ui is DfsUiState.Ready,
+            onRefresh = { viewModel.refresh() },
+            modifier = Modifier.weight(1f),
+        ) {
+            when (val state = viewModel.ui) {
+                is DfsUiState.Loading -> SlateLoading(state.slateDate)
+                is DfsUiState.Error -> SlateMessage("DFS slate unavailable", state.message, { viewModel.refresh() })
+                is DfsUiState.Empty -> SlateMessage(
+                    title = "No lineups",
+                    body = state.message,
+                    onRetry = { viewModel.refresh() },
+                    fetchedAt = state.fetchedAt,
+                    zone = StartersRepository.SLATE_ZONE,
+                    badge = state.sourceLabel,
                 )
-                LeverCard(
-                    title = "OWN LEVER",
-                    value = ownLabel(ownDots),
-                    icon = Icons.Outlined.Person,
-                    filled = ownDots,
-                    onClick = { ownDots = if (ownDots == 5) 1 else ownDots + 1 },
-                    modifier = Modifier.weight(1f),
+                is DfsUiState.Ready -> ReadyDfs(
+                    state = state,
+                    contest = viewModel.contest,
+                    stackDots = viewModel.stackDots,
+                    ownDots = viewModel.ownDots,
+                    onContest = viewModel::setContest,
+                    onStack = viewModel::cycleStack,
+                    onOwn = viewModel::cycleOwn,
+                    onPage = { viewModel.currentLineupIndex = it },
+                    onImport = { showImport = true },
+                    onClearImport = {
+                        viewModel.clearImport()
+                        toast("Back to EXAMPLE formula salaries.")
+                    },
                 )
             }
-            Spacer(Modifier.height(14.dp))
+        }
+        val ready = viewModel.ui as? DfsUiState.Ready
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            StubButton(
+                label = "Regenerate 5",
+                onClick = {
+                    viewModel.regenerate()
+                    toast("Re-ran optimizer (${viewModel.contest.name.lowercase()})")
+                },
+                modifier = Modifier.weight(1f),
+                leading = { Icon(Icons.Outlined.Refresh, null, tint = TextPrimary, modifier = Modifier.size(16.dp)) },
+            )
+            StubButton(
+                label = "Export all",
+                onClick = {
+                    val csv = viewModel.exportCsv()
+                    if (csv.isBlank()) {
+                        toast("Nothing to export yet.")
+                    } else {
+                        val send = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/csv"
+                            putExtra(Intent.EXTRA_TEXT, csv)
+                            putExtra(Intent.EXTRA_SUBJECT, "Pablito DFS lineups")
+                        }
+                        runCatching { context.startActivity(Intent.createChooser(send, "Export lineups")) }
+                            .onFailure { toast("Share sheet unavailable — copied CSV instead.") }
+                        copyText(context, csv)
+                    }
+                },
+                modifier = Modifier.weight(1f),
+                leading = { Icon(Icons.Outlined.FileUpload, null, tint = TextPrimary, modifier = Modifier.size(16.dp)) },
+            )
+            StubButton(
+                label = "Copy this",
+                onClick = {
+                    val text = viewModel.copyCurrent(viewModel.currentLineupIndex)
+                    if (text.isBlank()) toast("No lineup to copy") else {
+                        copyText(context, text)
+                        toast("Copied lineup")
+                    }
+                },
+                modifier = Modifier.weight(1f),
+                leading = { Icon(Icons.Outlined.ContentCopy, null, tint = TextPrimary, modifier = Modifier.size(16.dp)) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReadyDfs(
+    state: DfsUiState.Ready,
+    contest: ContestType,
+    stackDots: Int,
+    ownDots: Int,
+    onContest: (ContestType) -> Unit,
+    onStack: () -> Unit,
+    onOwn: () -> Unit,
+    onPage: (Int) -> Unit,
+    onImport: () -> Unit,
+    onClearImport: () -> Unit,
+) {
+    val board = state.board
+    val lineups = board.lineups
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { lineups.size.coerceAtLeast(1) })
+    val scope = rememberCoroutineScope()
+    androidx.compose.runtime.LaunchedEffect(pagerState.currentPage) {
+        onPage(pagerState.currentPage)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp),
+    ) {
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f)) {
+                Text("DFS Lineups", color = TextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                Text("FanDuel classic • $35k • our projections", color = AccentGreen, fontSize = 13.sp)
+            }
+            ContestToggle(contest, onContest)
+        }
+        Spacer(Modifier.height(8.dp))
+        LiveBadge(
+            when (board.salarySource) {
+                SalarySource.IMPORTED -> "Imported slate"
+                SalarySource.EXAMPLE_FILE -> "EXAMPLE file"
+                SalarySource.EXAMPLE_FORMULA -> "EXAMPLE salaries"
+            },
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(board.salaryNote, color = TextMuted, fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Import slate", color = AccentGreen, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(onClick = onImport))
+            if (board.salarySource != SalarySource.EXAMPLE_FORMULA) {
+                Text("Use formula", color = TextMuted, fontSize = 12.sp, modifier = Modifier.clickable(onClick = onClearImport))
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            LeverCard(
+                title = "STACK LEVER",
+                value = "Stack $stackDots",
+                icon = Icons.Outlined.Layers,
+                filled = stackDots,
+                onClick = onStack,
+                modifier = Modifier.weight(1f),
+            )
+            LeverCard(
+                title = "OWN LEVER",
+                value = ownLabel(ownDots),
+                icon = Icons.Outlined.Person,
+                filled = ownDots,
+                onClick = onOwn,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Spacer(Modifier.height(14.dp))
+        if (lineups.isEmpty()) {
+            Text("Optimizer produced no legal lineups.", color = TextMuted)
+        } else {
             HorizontalPager(
                 state = pagerState,
                 contentPadding = PaddingValues(horizontal = 18.dp),
@@ -135,16 +368,10 @@ fun DfsLineupsScreen(onBack: () -> Unit) {
                     .fillMaxWidth()
                     .height(430.dp),
             ) { page ->
-                LineupCard(
-                    lineup = lineups[page],
-                    selected = pagerState.currentPage == page,
-                )
+                LineupCard(lineup = lineups[page], selected = pagerState.currentPage == page)
             }
             Spacer(Modifier.height(10.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-            ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                 lineups.forEachIndexed { index, _ ->
                     Box(
                         modifier = Modifier
@@ -162,65 +389,33 @@ fun DfsLineupsScreen(onBack: () -> Unit) {
                 horizontalArrangement = Arrangement.Center,
             ) {
                 IconButton(onClick = {
-                    scope.launch {
-                        pagerState.animateScrollToPage((pagerState.currentPage - 1).coerceAtLeast(0))
-                    }
+                    scope.launch { pagerState.animateScrollToPage((pagerState.currentPage - 1).coerceAtLeast(0)) }
                 }) {
                     Icon(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, "Previous", tint = TextPrimary)
                 }
-                Text(
-                    "Lineup ${pagerState.currentPage + 1} of ${lineups.size}",
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Medium,
-                )
+                Text("Lineup ${pagerState.currentPage + 1} of ${lineups.size}", color = TextPrimary, fontWeight = FontWeight.Medium)
                 IconButton(onClick = {
-                    scope.launch {
-                        pagerState.animateScrollToPage((pagerState.currentPage + 1).coerceAtMost(lineups.lastIndex))
-                    }
+                    scope.launch { pagerState.animateScrollToPage((pagerState.currentPage + 1).coerceAtMost(lineups.lastIndex)) }
                 }) {
                     Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, "Next", tint = TextPrimary)
                 }
             }
-            Spacer(Modifier.height(6.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-            ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 lineups.forEachIndexed { index, lineup ->
-                    LineupShortcut(
-                        lineup = lineup,
-                        selected = index == pagerState.currentPage,
-                        onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                    )
+                    LineupShortcut(lineup, index == pagerState.currentPage) {
+                        scope.launch { pagerState.animateScrollToPage(index) }
+                    }
                 }
             }
-            Spacer(Modifier.height(16.dp))
         }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            StubButton(
-                label = "Regenerate 5",
-                onClick = { toast("Regenerated 5 ${contest.name.lowercase()} lineups (mock)") },
-                modifier = Modifier.weight(1f),
-                leading = { Icon(Icons.Outlined.Refresh, null, tint = TextPrimary, modifier = Modifier.size(16.dp)) },
-            )
-            StubButton(
-                label = "Export all",
-                onClick = { toast("Export stub — FanDuel CSV coming later") },
-                modifier = Modifier.weight(1f),
-                leading = { Icon(Icons.Outlined.FileUpload, null, tint = TextPrimary, modifier = Modifier.size(16.dp)) },
-            )
-            StubButton(
-                label = "Copy this",
-                onClick = { toast("Copied ${lineups[pagerState.currentPage].title}") },
-                modifier = Modifier.weight(1f),
-                leading = { Icon(Icons.Outlined.ContentCopy, null, tint = TextPrimary, modifier = Modifier.size(16.dp)) },
-            )
-        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            "Points from our SP K outlook + batter HR/counting model, mapped to FanDuel MLB scoring. " +
+                "Copy uses the first visible lineup unless you export all.",
+            color = TextMuted,
+            fontSize = 11.sp,
+        )
+        Spacer(Modifier.height(8.dp))
     }
 }
 
@@ -277,12 +472,7 @@ private fun LeverCard(
         Spacer(Modifier.height(6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             repeat(5) { i ->
-                Box(
-                    Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(if (i < filled) AccentGreen else CardStroke),
-                )
+                Box(Modifier.size(8.dp).clip(CircleShape).background(if (i < filled) AccentGreen else CardStroke))
             }
         }
     }
@@ -306,7 +496,7 @@ private fun LineupCard(lineup: DfsLineup, selected: Boolean) {
             fontSize = 12.sp,
         )
         Text(
-            "Proj ${String.format(Locale.US, "%.1f", lineup.proj)}  •  Ceiling ${lineup.ceiling}  •  Avg Own ${lineup.avgOwnPct}%",
+            "Proj ${String.format(Locale.US, "%.1f", lineup.proj)}  •  Ceiling ${lineup.ceiling}  •  ${lineup.stackNote}",
             color = AccentGreen,
             fontSize = 12.sp,
         )
@@ -320,13 +510,11 @@ private fun LineupCard(lineup: DfsLineup, selected: Boolean) {
         Spacer(Modifier.height(4.dp))
         lineup.players.forEach { player ->
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 3.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(player.pos, color = AccentGreen, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(44.dp))
-                Text(player.name, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                Text(player.name, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), maxLines = 1)
                 Text(
                     "$" + "%,d".format(Locale.US, player.salary),
                     color = TextPrimary,
@@ -351,8 +539,8 @@ private fun LineupCard(lineup: DfsLineup, selected: Boolean) {
 private fun LineupShortcut(lineup: DfsLineup, selected: Boolean, onClick: () -> Unit) {
     val (icon, code) = when (lineup.kind) {
         LineupKind.CASH_CORE -> Icons.Outlined.Shield to "L1"
-        LineupKind.NYY_STACK -> null to "NYY"
-        LineupKind.LAD_STACK -> null to "LAD"
+        LineupKind.STACK_A -> null to lineup.stackNote.take(3)
+        LineupKind.STACK_B -> null to lineup.stackNote.take(3)
         LineupKind.LEVERAGE -> Icons.Outlined.Bolt to "L4"
         LineupKind.CONTRARIAN -> Icons.Outlined.GpsFixed to "L5"
     }
@@ -376,8 +564,8 @@ private fun LineupShortcut(lineup: DfsLineup, selected: Boolean, onClick: () -> 
         Text(
             when (lineup.kind) {
                 LineupKind.CASH_CORE -> "Cash"
-                LineupKind.NYY_STACK -> "NYY"
-                LineupKind.LAD_STACK -> "LAD"
+                LineupKind.STACK_A -> "Stk"
+                LineupKind.STACK_B -> "Stk"
                 LineupKind.LEVERAGE -> "Lev"
                 LineupKind.CONTRARIAN -> "Fade"
             },
@@ -393,4 +581,9 @@ private fun ownLabel(dots: Int): String = when (dots) {
     3 -> "Leverage"
     4 -> "Smash"
     else -> "Max lev"
+}
+
+private fun copyText(context: Context, text: String) {
+    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    cm.setPrimaryClip(ClipData.newPlainText("pablitos-dfs", text))
 }

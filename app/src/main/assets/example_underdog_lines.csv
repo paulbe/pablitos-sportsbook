@@ -1,0 +1,11 @@
+# EXAMPLE Underdog-style lines — NOT live Underdog odds.
+# Format: player,market,line,side,odds
+# Markets: pitcher_ks, batter_hr, batter_hits
+# Matching is by player name against today's model board.
+player,market,line,side,odds
+Tarik Skubal,pitcher_ks,7.5,higher,-120
+Zack Wheeler,pitcher_ks,6.5,higher,-110
+Aaron Judge,batter_hr,0.5,higher,+130
+Shohei Ohtani,batter_hr,0.5,higher,+115
+Kyle Schwarber,batter_hr,0.5,higher,+145
+Juan Soto,batter_hits,1.5,higher,-105

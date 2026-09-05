@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -19,12 +20,20 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.ShowChart
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,12 +58,15 @@ import com.pablitosb.sportsbook.theme.ScriptFamily
 import com.pablitosb.sportsbook.theme.StableSlate
 import com.pablitosb.sportsbook.theme.TextMuted
 import com.pablitosb.sportsbook.theme.TextPrimary
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 fun slateDateLabel(date: LocalDate = LocalDate.now()): String {
     return date.format(DateTimeFormatter.ofPattern("EEE MMM d", Locale.US))
+}
+
+fun updatedLabel(instant: Instant, zone: ZoneId): String {
+    val local = instant.atZone(zone)
+    return "Updated " + local.format(DateTimeFormatter.ofPattern("h:mm a z", Locale.US))
 }
 
 fun initialsFor(name: String): String {
@@ -332,4 +344,114 @@ fun SectionRule(modifier: Modifier = Modifier) {
             .height(1.dp)
             .background(CardStroke),
     )
+}
+
+@Composable
+fun LiveBadge(label: String) {
+    Box(
+        modifier = Modifier
+            .background(AccentGreen.copy(alpha = 0.14f), RoundedCornerShape(20.dp))
+            .border(1.dp, AccentGreen.copy(alpha = 0.55f), RoundedCornerShape(20.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+    ) {
+        Text(label, color = AccentGreen, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+fun SlateDateNavBar(
+    date: LocalDate,
+    isToday: Boolean,
+    canPrev: Boolean,
+    canNext: Boolean,
+    onPrev: () -> Unit,
+    onNext: () -> Unit,
+    onToday: () -> Unit,
+    onPick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onPrev, enabled = canPrev) {
+            Icon(
+                Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
+                contentDescription = "Previous day",
+                tint = if (canPrev) AccentGreen else TextMuted,
+            )
+        }
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .border(1.dp, AccentGreen.copy(alpha = 0.7f), RoundedCornerShape(20.dp))
+                .clickable(onClick = onPick)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Icon(Icons.Outlined.CalendarMonth, null, tint = AccentGreen, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                slateDateLabel(date) + if (isToday) "  ·  Today" else "",
+                color = AccentGreen,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+            )
+        }
+        IconButton(onClick = onNext, enabled = canNext) {
+            Icon(
+                Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                contentDescription = "Next day",
+                tint = if (canNext) AccentGreen else TextMuted,
+            )
+        }
+        if (!isToday) {
+            TextButton(onClick = onToday) {
+                Text("Today", color = AccentGreen, fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@Composable
+fun SlateLoading(date: LocalDate) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            CircularProgressIndicator(color = AccentGreen, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
+            Spacer(Modifier.height(12.dp))
+            Text("Loading MLB slate for ${slateDateLabel(date)}…", color = TextMuted, fontSize = 13.sp)
+        }
+    }
+}
+
+@Composable
+fun SlateMessage(
+    title: String,
+    body: String,
+    onRetry: () -> Unit,
+    fetchedAt: Instant? = null,
+    zone: ZoneId? = null,
+    badge: String? = null,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (badge != null) LiveBadge(badge)
+        Spacer(Modifier.height(16.dp))
+        Text(title, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 20.sp)
+        Spacer(Modifier.height(8.dp))
+        Text(body, color = TextMuted, fontSize = 14.sp)
+        if (fetchedAt != null && zone != null) {
+            Spacer(Modifier.height(6.dp))
+            Text(updatedLabel(fetchedAt, zone), color = TextMuted, fontSize = 11.sp)
+        }
+        Spacer(Modifier.height(18.dp))
+        StubButton(label = "Retry", onClick = onRetry, filled = true)
+    }
 }

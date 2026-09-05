@@ -45,6 +45,10 @@ data class HrBatter(
     val pitcherName: String,
     val pitcherHr9: Float,
     val regressionLean: Boolean = false,
+    val mlbId: Int = 0,
+    val battingOrder: Int? = null,
+    val sourceNote: String = "",
+    val expectedPa: Float = 0f,
 )
 
 data class DfsPlayer(
@@ -52,9 +56,11 @@ data class DfsPlayer(
     val name: String,
     val salary: Int,
     val proj: Float,
+    val team: String = "",
+    val mlbId: Int = 0,
 )
 
-enum class LineupKind { CASH_CORE, NYY_STACK, LAD_STACK, LEVERAGE, CONTRARIAN }
+enum class LineupKind { CASH_CORE, STACK_A, STACK_B, LEVERAGE, CONTRARIAN }
 
 data class DfsLineup(
     val index: Int,
@@ -72,18 +78,22 @@ data class DfsLineup(
 
 enum class Confidence { VERY_HIGH, HIGH, MEDIUM, LOW }
 
+enum class PropLineSource { MODEL_BOARD, IMPORTED }
+
 data class UnderdogProp(
     val rank: Int,
     val player: String,
     val team: String,
     val propLabel: String,
     val line: String,
-    val odds: Int,
+    val odds: Int? = null,
     val modelProb: Float,
-    val impliedProb: Float,
+    val impliedProb: Float? = null,
     val confidence: Confidence,
+    val source: PropLineSource = PropLineSource.MODEL_BOARD,
+    val market: String = "",
 ) {
-    val edgePct: Float get() = modelProb - impliedProb
+    val edgePct: Float? get() = impliedProb?.let { modelProb - it }
 }
 
 enum class ContestType { CASH, GPP }

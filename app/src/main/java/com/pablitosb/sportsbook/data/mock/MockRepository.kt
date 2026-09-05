@@ -61,7 +61,7 @@ object MockRepository {
         ),
         DfsLineup(
             index = 2,
-            kind = LineupKind.NYY_STACK,
+            kind = LineupKind.STACK_A,
             title = "Lineup 2 • GPP • NYY 4-stack",
             contest = "GPP",
             stackNote = "Yankees 4",
@@ -83,7 +83,7 @@ object MockRepository {
         ),
         DfsLineup(
             index = 3,
-            kind = LineupKind.LAD_STACK,
+            kind = LineupKind.STACK_B,
             title = "Lineup 3 • GPP • LAD 4-stack",
             contest = "GPP",
             stackNote = "Dodgers 4",

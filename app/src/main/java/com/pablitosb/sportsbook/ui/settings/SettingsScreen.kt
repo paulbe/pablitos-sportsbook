@@ -29,11 +29,12 @@ import com.pablitosb.sportsbook.ui.components.ScreenTopBar
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
     val rows = listOf(
-        "Theme" to "Dark navy + green (locked for v1)",
-        "Slate" to "MLB main slate • sample board",
-        "Data source" to "Mock / sample — no live APIs yet",
-        "Sportsbooks" to "FanDuel DFS • Underdog Fantasy props",
-        "Version" to "1.0.0 scaffold",
+        "Theme" to "Dark navy + green (locked)",
+        "Slate timezone" to "America/Los_Angeles",
+        "MLB feed" to "statsapi.mlb.com — starters, HR, DFS proj, props model",
+        "FanDuel salaries" to "EXAMPLE formula / import — not live FD",
+        "Underdog lines" to "Model board / import — not live UD",
+        "Version" to "1.3.0 (v0.1.3-debug)",
     )
     Column(
         modifier = Modifier
@@ -65,7 +66,7 @@ fun SettingsScreen(onBack: () -> Unit) {
         }
         Spacer(Modifier.height(16.dp))
         Text(
-            "Live Statcast, FanDuel, and Underdog sync are intentionally out of scope for this build.",
+            "Statcast barrels, live FanDuel prices, and an Underdog login feed are not in this build. Import a slate or lines if you have them.",
             color = AccentGreen,
             fontSize = 12.sp,
         )
