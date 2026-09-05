@@ -112,7 +112,10 @@ fun BrandMark(
 }
 
 @Composable
-fun DateChip(modifier: Modifier = Modifier) {
+fun DateChip(
+    modifier: Modifier = Modifier,
+    date: LocalDate = LocalDate.now(),
+) {
     Row(
         modifier = modifier
             .border(1.dp, AccentGreen.copy(alpha = 0.7f), RoundedCornerShape(20.dp))
@@ -127,7 +130,7 @@ fun DateChip(modifier: Modifier = Modifier) {
         )
         Spacer(Modifier.width(6.dp))
         Text(
-            text = slateDateLabel(),
+            text = slateDateLabel(date),
             color = AccentGreenSoftText,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,

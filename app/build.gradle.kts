@@ -12,8 +12,8 @@ android {
         applicationId = "com.pablitosb.sportsbook"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
     }
 
     buildTypes {
@@ -51,5 +51,9 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.okhttp)
+    implementation(libs.kotlinx.coroutines.android)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

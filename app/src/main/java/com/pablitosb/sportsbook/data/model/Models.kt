@@ -15,6 +15,9 @@ data class Starter(
     val projKPct: Float,
     val nextStartKs: Float,
     val trend: List<Float>,
+    val gameTimeLabel: String = "",
+    val mlbId: Int = 0,
+    val homeAway: String = "",
 )
 
 enum class Weather { SUN, CLOUD }
