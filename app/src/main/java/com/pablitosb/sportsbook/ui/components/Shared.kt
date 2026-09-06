@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pablitosb.sportsbook.data.mlb.Matchup
 import com.pablitosb.sportsbook.data.model.Outlook
 import com.pablitosb.sportsbook.theme.AccentGreen
 import com.pablitosb.sportsbook.theme.CardFill
@@ -76,6 +77,36 @@ fun initialsFor(name: String): String {
         parts.isNotEmpty() -> parts.first().take(2)
         else -> "?"
     }.uppercase(Locale.US)
+}
+
+/**
+ * Game matchup as **AWAY @ HOME**. [pitcherTeam] stays white; [opponentColor]
+ * tints only the other club. When [opponentColor] is null both sides are white.
+ */
+@Composable
+fun AwayAtHomeLine(
+    team: String,
+    opponent: String,
+    homeAway: String = "",
+    awayAbbr: String = "",
+    homeAbbr: String = "",
+    time: String = "",
+    opponentColor: Color? = null,
+    fontSize: androidx.compose.ui.unit.TextUnit = 11.sp,
+) {
+    val (away, home) = Matchup.resolve(awayAbbr, homeAbbr, team, opponent, homeAway)
+    val awayIsPitcher = away.equals(team, ignoreCase = true)
+    val homeIsPitcher = home.equals(team, ignoreCase = true)
+    val awayColor = if (awayIsPitcher || opponentColor == null) TextPrimary else opponentColor
+    val homeColor = if (homeIsPitcher || opponentColor == null) TextPrimary else opponentColor
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(away, color = awayColor, fontSize = fontSize, fontWeight = FontWeight.Medium)
+        Text(" @ ", color = TextMuted, fontSize = fontSize)
+        Text(home, color = homeColor, fontSize = fontSize, fontWeight = FontWeight.Medium)
+        if (time.isNotBlank()) {
+            Text("  ·  $time", color = TextMuted, fontSize = fontSize)
+        }
+    }
 }
 
 @Composable

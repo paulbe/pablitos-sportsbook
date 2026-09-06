@@ -46,6 +46,9 @@ class HrRepository(
                     battingOrder = h.battingOrder,
                     sourceNote = if (h.inPostedLineup) "Lineup" else "Roster",
                     expectedPa = h.expectedPa,
+                    awayAbbr = h.awayAbbr,
+                    homeAbbr = h.homeAbbr,
+                    homeAway = h.homeAway,
                 )
             }
         return HrBoard(board, batters)

@@ -74,6 +74,9 @@ data class HitterProjection(
     val expectedTb: Float = 0f,
     val tbPerPa: Float = 0f,
     val slgProxy: Float = 0f,
+    val awayAbbr: String = "",
+    val homeAbbr: String = "",
+    val homeAway: String = "",
 )
 
 data class PitcherProjection(
@@ -96,6 +99,9 @@ data class PitcherProjection(
     val fdPoints: Float,
     val outlook: Outlook,
     val gamePk: Int,
+    val awayAbbr: String = "",
+    val homeAbbr: String = "",
+    val homeAway: String = "",
 )
 
 data class ProjectionBoard(

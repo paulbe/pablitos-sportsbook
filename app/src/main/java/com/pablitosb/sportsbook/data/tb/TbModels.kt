@@ -26,6 +26,9 @@ data class TbBatter(
     val parkAdjPct: Int,
     val pitcherAdjPct: Int,
     val gameHrPct: Float,
+    val awayAbbr: String = "",
+    val homeAbbr: String = "",
+    val homeAway: String = "",
 )
 
 object TbSorter {
@@ -64,6 +67,9 @@ object TbSorter {
                     parkAdjPct = h.parkAdjPct,
                     pitcherAdjPct = h.pitcherAdjPct,
                     gameHrPct = h.gameHrProb * 100f,
+                    awayAbbr = h.awayAbbr,
+                    homeAbbr = h.homeAbbr,
+                    homeAway = h.homeAway,
                 )
             }
     }

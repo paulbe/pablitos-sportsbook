@@ -369,7 +369,7 @@ object ParkWeather {
     }
 
     fun boostLabel(pct: Int): String =
-        if (pct > 0) "Boost +$pct%" else "Boost $pct%"
+        if (pct > 0) "Weather boost +$pct%" else "Weather boost $pct%"
 
     internal fun pitcherMaxTemp(pf: Float): Int = when {
         pf <= 0.90f -> 76

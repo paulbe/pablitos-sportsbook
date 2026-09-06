@@ -129,6 +129,7 @@ class ProjectionService(
             val hr9 = if (ip > 0f) hr * 9f / ip else HrCalculator.LEAGUE_HR9
             val team = if (id == game.homePitcherId) game.homeAbbr else game.awayAbbr
             val opp = if (id == game.homePitcherId) game.awayAbbr else game.homeAbbr
+            val homeAway = if (id == game.homePitcherId) "home" else "away"
             PitcherProjection(
                 mlbId = id,
                 name = name,
@@ -149,6 +150,9 @@ class ProjectionService(
                 fdPoints = FdScoring.pitcherPoints(outlook.nextStartKs, expectedIp, era),
                 outlook = outlook.outlook,
                 gamePk = game.gamePk,
+                awayAbbr = game.awayAbbr,
+                homeAbbr = game.homeAbbr,
+                homeAway = homeAway,
             )
         }.distinctBy { it.mlbId }
 
@@ -188,6 +192,7 @@ class ProjectionService(
             val expectedHits = if (pa > 0) hits.toFloat() / pa * hr.expectedPa else 0.85f
             val team = if (ref.teamId == game.homeId) game.homeAbbr else game.awayAbbr
             val opponent = if (ref.teamId == game.homeId) game.awayAbbr else game.homeAbbr
+            val homeAway = if (ref.teamId == game.homeId) "home" else "away"
             val doubles = stat?.optIntOrNull("doubles") ?: 0
             val triples = stat?.optIntOrNull("triples") ?: 0
             val hrCount = sample.hr
@@ -260,6 +265,9 @@ class ProjectionService(
                 expectedTb = tb.expectedTb,
                 tbPerPa = tb.tbPerPa,
                 slgProxy = tb.slgProxy,
+                awayAbbr = game.awayAbbr,
+                homeAbbr = game.homeAbbr,
+                homeAway = homeAway,
             )
         }.sortedByDescending { it.gameHrProb }
 

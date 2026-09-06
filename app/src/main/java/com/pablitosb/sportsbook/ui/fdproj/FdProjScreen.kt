@@ -63,9 +63,9 @@ import com.pablitosb.sportsbook.theme.CardFill
 import com.pablitosb.sportsbook.theme.CardStroke
 import com.pablitosb.sportsbook.theme.NavyBlack
 import com.pablitosb.sportsbook.theme.NavySurface
-import com.pablitosb.sportsbook.theme.OpponentRed
 import com.pablitosb.sportsbook.theme.TextMuted
 import com.pablitosb.sportsbook.theme.TextPrimary
+import com.pablitosb.sportsbook.ui.components.AwayAtHomeLine
 import com.pablitosb.sportsbook.ui.components.LiveBadge
 import com.pablitosb.sportsbook.ui.components.SalaryActionLinks
 import com.pablitosb.sportsbook.ui.components.SalaryImportDialog
@@ -430,12 +430,16 @@ private fun ProjRow(rank: Int, row: FdProjRow) {
                 Text(row.name, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1)
                 Row {
                     Text(row.pos, color = AccentGreen, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                    Text("  ${row.team}", color = TextPrimary, fontSize = 11.sp)
-                    Text(" vs ", color = TextMuted, fontSize = 11.sp)
-                    Text(row.opponent, color = OpponentRed, fontSize = 11.sp)
-                    if (row.gameTimeLabel.isNotBlank()) {
-                        Text("  ${row.gameTimeLabel}", color = TextMuted, fontSize = 10.sp)
-                    }
+                    Text("  ", color = TextMuted, fontSize = 11.sp)
+                    AwayAtHomeLine(
+                        team = row.team,
+                        opponent = row.opponent,
+                        homeAway = row.homeAway,
+                        awayAbbr = row.awayAbbr,
+                        homeAbbr = row.homeAbbr,
+                        time = row.gameTimeLabel,
+                        fontSize = 11.sp,
+                    )
                 }
                 if (row.driver.isNotBlank()) {
                     Text(row.driver, color = TextMuted, fontSize = 10.sp)

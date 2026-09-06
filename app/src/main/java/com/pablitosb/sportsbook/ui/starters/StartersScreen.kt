@@ -7,10 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,21 +16,19 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Umbrella
 import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.material3.CircularProgressIndicator
@@ -58,15 +54,18 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pablitosb.sportsbook.data.mlb.OppKScale
+import com.pablitosb.sportsbook.data.mlb.OppKTier
 import com.pablitosb.sportsbook.data.model.Outlook
 import com.pablitosb.sportsbook.data.model.Starter
 import com.pablitosb.sportsbook.data.model.Weather
 import com.pablitosb.sportsbook.data.model.WindRel
 import com.pablitosb.sportsbook.data.model.WxTag
-import com.pablitosb.sportsbook.data.starters.ParkWeather
 import com.pablitosb.sportsbook.data.starters.SlateMode
 import com.pablitosb.sportsbook.data.starters.StartersRepository
 import com.pablitosb.sportsbook.data.starters.StartersSort
@@ -81,11 +80,9 @@ import com.pablitosb.sportsbook.theme.RegRed
 import com.pablitosb.sportsbook.theme.StableSlate
 import com.pablitosb.sportsbook.theme.TextMuted
 import com.pablitosb.sportsbook.theme.TextPrimary
+import com.pablitosb.sportsbook.ui.components.AwayAtHomeLine
 import com.pablitosb.sportsbook.ui.components.OutlookChip
-import com.pablitosb.sportsbook.ui.components.PlayerAvatar
-import com.pablitosb.sportsbook.ui.components.ScreenTopBar
 import com.pablitosb.sportsbook.ui.components.SectionRule
-import com.pablitosb.sportsbook.ui.components.Sparkline
 import com.pablitosb.sportsbook.ui.components.StubButton
 import com.pablitosb.sportsbook.ui.components.slateDateLabel
 import java.time.Instant
@@ -110,6 +107,11 @@ fun StartersScreen(
         is StartersUiState.Error -> state.slateDate
         is StartersUiState.Loading -> state.slateDate
     }
+    val liveLabel = when (val state = viewModel.ui) {
+        is StartersUiState.Ready -> if (state.board.mode == SlateMode.RESULTS) "Results · MLB" else "Live • MLB"
+        is StartersUiState.Empty -> state.sourceLabel
+        else -> "Live • MLB"
+    }
 
     Column(
         modifier = Modifier
@@ -118,14 +120,7 @@ fun StartersScreen(
             .statusBarsPadding()
             .navigationBarsPadding(),
     ) {
-        ScreenTopBar(
-            onBack = onBack,
-            trailing = {
-                IconButton(onClick = { viewModel.refresh() }) {
-                    Icon(Icons.Outlined.Refresh, contentDescription = "Refresh", tint = AccentGreen)
-                }
-            },
-        )
+        StartersTopBar(onBack = onBack, liveLabel = liveLabel)
         DateNavBar(
             date = slate,
             isToday = slate == viewModel.today,
@@ -187,6 +182,36 @@ fun StartersScreen(
 }
 
 @Composable
+private fun StartersTopBar(onBack: () -> Unit, liveLabel: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onBack) {
+            Icon(
+                Icons.AutoMirrored.Outlined.ArrowBack,
+                contentDescription = "Back",
+                tint = AccentGreen,
+            )
+        }
+        Text(
+            "Projected Starters",
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        LiveChip(liveLabel)
+        Spacer(Modifier.width(8.dp))
+    }
+}
+
+@Composable
 private fun DateNavBar(
     date: LocalDate,
     isToday: Boolean,
@@ -213,9 +238,8 @@ private fun DateNavBar(
         Row(
             modifier = Modifier
                 .weight(1f)
-                .border(1.dp, AccentGreen.copy(alpha = 0.7f), RoundedCornerShape(20.dp))
                 .clickable(onClick = onPick)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
@@ -253,65 +277,45 @@ private fun ReadyList(state: StartersUiState.Ready, viewModel: StartersViewModel
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 12.dp),
     ) {
         item {
-            Spacer(Modifier.height(6.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                LiveChip(board.sourceLabel)
-                if (board.reconstructed) {
-                    Spacer(Modifier.width(8.dp))
-                    LiveChip("Reconstructed")
-                }
-                Spacer(Modifier.weight(1f))
-                Text(updatedLabel(board.fetchedAt), color = TextMuted, fontSize = 11.sp)
-            }
-            Spacer(Modifier.height(10.dp))
-            Text(
-                if (results) "Predicted vs actual" else "Projected Starters",
-                color = TextPrimary,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
+            FilterTabRow(
+                selected = viewModel.sortKey,
+                onSelect = { viewModel.selectSort(it) },
             )
+            Spacer(Modifier.height(8.dp))
             Text(
-                sortCaption(results, viewModel.sortKey, viewModel.sortAscending),
+                board.oppKScale.legend(),
                 color = TextMuted,
-                fontSize = 13.sp,
+                fontSize = 10.sp,
+                lineHeight = 13.sp,
             )
             if (board.postponedCount > 0) {
                 Text(
                     "${board.postponedCount} game(s) postponed/canceled — omitted.",
                     color = TextMuted,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                 )
             }
-            Spacer(Modifier.height(10.dp))
-            SortChipRow(
-                selected = viewModel.sortKey,
-                ascending = viewModel.sortAscending,
-                onSelect = { viewModel.selectSort(it) },
-            )
-            Spacer(Modifier.height(8.dp))
-            OutlookDots()
-            Spacer(Modifier.height(12.dp))
+            Text(updatedLabel(board.fetchedAt), color = TextMuted, fontSize = 10.sp)
+            Spacer(Modifier.height(6.dp))
         }
         itemsIndexed(sorted, key = { _, it -> "${it.mlbId}-${it.homeAway}-${it.gameTimeLabel}" }) { index, starter ->
-            StarterRow(starter, results, index + 1)
+            StarterRow(starter, results, viewModel.sortKey, index + 1, board.oppKScale)
             SectionRule()
         }
         item {
             Spacer(Modifier.height(14.dp))
+            OppKLegend(board.oppKScale)
+            Spacer(Modifier.height(10.dp))
             WeatherLegend()
             Spacer(Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.Top) {
                 Icon(Icons.Outlined.Info, null, tint = AccentGreen, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    "xwOBA · Statcast: Expected wOBA against via Statcast batted ball data " +
-                        "(lower is better for pitchers). Missing Savant row shows —.",
+                    "xwOBA · Statcast season-to-date expected wOBA against (lower is better). Missing Savant row shows —.",
                     color = TextMuted,
                     fontSize = 11.sp,
                     lineHeight = 15.sp,
@@ -321,12 +325,15 @@ private fun ReadyList(state: StartersUiState.Ready, viewModel: StartersViewModel
             Text(
                 if (results) {
                     "Predictions are reconstructed with OutlookCalculator using only game logs before this date. " +
-                        "Actual Ks / K% come from the boxscore starter (SO/BF). Δ = actual − predicted."
+                        "Actual Ks come from the boxscore starter. Δ = actual − predicted."
                 } else {
-                    "Outlook = quality (proj K% vs 22.5% lg) + last-5-GS vs season K% trajectory. " +
-                        "Proj Ks ≈ proj K% × expected BF. Boost % = HR park factor + park-relative wind + temp " +
-                        "(+ = hitter-friendly). Rain is a large negative, not a K boost. Tap a sort chip again to flip " +
-                        "direction. Use ◀ ▶ or the date chip to jump days."
+                    "Filters: Prog · Proj Ks · xwOBA · Proj Outs. Center shows only the selected stat. " +
+                        "Outlook = quality (proj K% vs 22.5% lg) + last-5-GS vs season K% trajectory. " +
+                        "Proj Ks ≈ proj K% × expected BF. Proj Outs = matchup-adjusted IP × 3 " +
+                        "(shrink recent/season IP/GS, then opponent OPS, Weather boost, early exits). " +
+                        "Weather boost % = HR park + park-relative wind + temp (+ = hitter-friendly). " +
+                        "Pitcher’s team stays white; opponent tint is team K% tertiles. " +
+                        "Tap an active filter to flip sort direction."
                 },
                 color = AccentGreen,
                 fontSize = 11.sp,
@@ -338,112 +345,87 @@ private fun ReadyList(state: StartersUiState.Ready, viewModel: StartersViewModel
 }
 
 @Composable
-private fun SortChipRow(
+private fun FilterTabRow(
     selected: StartersSort,
-    ascending: Boolean,
     onSelect: (StartersSort) -> Unit,
 ) {
-    val arrow = if (ascending) "↑" else "↓"
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.Bottom,
     ) {
-        Text("SORT", color = TextMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-        sortChips().forEach { (key, label) ->
+        filterTabs().forEach { (key, label) ->
             val on = key == selected
-            Box(
+            Column(
                 modifier = Modifier
-                    .background(
-                        if (on) AccentGreen.copy(alpha = 0.16f) else NavySurface,
-                        RoundedCornerShape(16.dp),
-                    )
-                    .border(
-                        1.dp,
-                        if (on) AccentGreen.copy(alpha = 0.7f) else CardStroke,
-                        RoundedCornerShape(16.dp),
-                    )
+                    .weight(1f)
                     .clickable { onSelect(key) }
-                    .padding(horizontal = 9.dp, vertical = 5.dp),
+                    .padding(top = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = if (on) "$label $arrow" else label,
-                    color = if (on) AccentGreen else TextMuted,
-                    fontSize = 11.sp,
-                    fontWeight = if (on) FontWeight.SemiBold else FontWeight.Medium,
+                    label,
+                    color = if (on) TextPrimary else TextMuted,
+                    fontSize = 13.sp,
+                    fontWeight = if (on) FontWeight.Bold else FontWeight.Medium,
+                    maxLines = 1,
+                )
+                Spacer(Modifier.height(6.dp))
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .background(if (on) AccentGreen else Color.Transparent, RoundedCornerShape(2.dp)),
                 )
             }
         }
     }
 }
 
-private fun sortChips(): List<Pair<StartersSort, String>> = listOf(
+private fun filterTabs(): List<Pair<StartersSort, String>> = listOf(
     StartersSort.PROG to "Prog",
     StartersSort.PROJ_KS to "Proj Ks",
     StartersSort.XWOBA to "xwOBA",
-    StartersSort.BOOST to "Boost",
-    StartersSort.TIME to "Time",
+    StartersSort.PROJ_OUTS to "Proj Outs",
 )
 
-private fun sortCaption(results: Boolean, key: StartersSort, ascending: Boolean): String {
-    val dir = if (ascending) "low → high" else "high → low"
-    return when (key) {
-        StartersSort.PROG ->
-            if (results) "Sorted by reconstructed outlook ($dir)"
-            else "Sorted by progression → regression ($dir)"
-        StartersSort.PROJ_KS -> "Sorted by Proj Ks ($dir)"
-        StartersSort.XWOBA ->
-            if (ascending) "Sorted by xwOBA · lower is better · missing last"
-            else "Sorted by xwOBA · higher first · missing last"
-        StartersSort.BOOST ->
-            if (ascending) "Sorted by weather/park boost · pitcher-friendly first · rain last"
-            else "Sorted by weather/park boost · hitter-friendly first · rain last"
-        StartersSort.TIME ->
-            if (ascending) "Sorted by first pitch · earliest first"
-            else "Sorted by first pitch · latest first"
-    }
-}
-
 @Composable
-private fun OutlookDots() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
+private fun OppKLegend(scale: OppKScale) {
+    Column {
         Text(
-            "Ranked by progression → regression",
+            "OPPONENT K% COLOR",
             color = TextMuted,
             fontSize = 10.sp,
-            modifier = Modifier.weight(1f),
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.6.sp,
         )
-        DotLab("PROG", AccentGreen)
-        DotLab("STABLE", StableSlate)
-        DotLab("REG", RegRed)
-    }
-}
-
-@Composable
-private fun DotLab(label: String, color: Color) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Box(
-            Modifier
-                .size(7.dp)
-                .background(color, CircleShape),
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            LegendSwatch(RegRed, "Low K")
+            LegendSwatch(StableSlate, "Mid")
+            LegendSwatch(AccentGreen, "High K")
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(scale.legend(), color = TextMuted, fontSize = 10.sp, lineHeight = 14.sp)
+        Text(
+            "Pitcher’s club is always white. Only the opponent abbreviation is colored.",
+            color = TextMuted,
+            fontSize = 10.sp,
+            lineHeight = 14.sp,
         )
-        Text(label, color = color, fontSize = 9.sp, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
 private fun WeatherLegend() {
     Column {
-        Text("WEATHER + PARK FACTOR", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp)
+        Text(
+            "WEATHER CHIP",
+            color = TextMuted,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.6.sp,
+        )
         Spacer(Modifier.height(6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             LegendSwatch(RegRed, "RAIN RISK")
@@ -456,7 +438,7 @@ private fun WeatherLegend() {
         }
         Spacer(Modifier.height(4.dp))
         Text(
-            "Rain stays weather-only. HR / pitcher chips blend Open-Meteo with the multi-year HR park factor (PF 1.00 = average).",
+            "Weather boost is a persistent park + wind + temp % (not a filter). Rain is weather-only.",
             color = TextMuted,
             fontSize = 10.sp,
             lineHeight = 14.sp,
@@ -480,7 +462,11 @@ private fun LiveChip(label: String) {
             .border(1.dp, AccentGreen.copy(alpha = 0.55f), RoundedCornerShape(20.dp))
             .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
-        Text(label, color = AccentGreen, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(6.dp).background(AccentGreen, CircleShape))
+            Spacer(Modifier.width(6.dp))
+            Text(label, color = AccentGreen, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        }
     }
 }
 
@@ -525,262 +511,181 @@ private fun MessageBody(
 }
 
 @Composable
-private fun StarterRow(starter: Starter, results: Boolean, displayRank: Int = starter.rank) {
-    val accent = when (starter.outlook) {
-        Outlook.PROG -> AccentGreen
-        Outlook.STABLE -> StableSlate
-        Outlook.REG -> RegRed
+private fun StarterRow(
+    starter: Starter,
+    results: Boolean,
+    sortKey: StartersSort,
+    displayRank: Int,
+    scale: OppKScale,
+) {
+    val oppColor = when (scale.tier(starter.oppKRate)) {
+        OppKTier.LOW -> OpponentRed
+        OppKTier.HIGH -> AccentGreen
+        OppKTier.MID, OppKTier.UNKNOWN -> StableSlate
     }
-    val scoreColor = when {
-        starter.outlookScore > 3 -> AccentGreen
-        starter.outlookScore < -3 -> RegRed
-        else -> StableSlate
-    }
-    val trendColor = when (starter.outlook) {
-        Outlook.REG -> RegRed
-        Outlook.PROG -> AccentGreen
-        Outlook.STABLE -> StableSlate
+    val boostColor = when {
+        starter.wxTag == WxTag.RAIN_RISK -> RegRed
+        starter.envBoostPct > 3 -> AccentGreen
+        starter.envBoostPct < -3 -> AccentGreen
+        else -> AccentGreen
     }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min)
             .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            Modifier
-                .width(3.dp)
-                .fillMaxHeight()
-                .background(accent, RoundedCornerShape(2.dp)),
-        )
-        Spacer(Modifier.width(8.dp))
         Text(
             text = displayRank.toString(),
             color = TextPrimary,
             fontWeight = FontWeight.Bold,
-            fontSize = 18.sp,
-            modifier = Modifier.width(20.dp),
+            fontSize = 20.sp,
+            modifier = Modifier.width(22.dp),
         )
-        Column(Modifier.weight(1f)) {
+        Column(Modifier.weight(1.15f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                PlayerAvatar(name = starter.name, team = starter.team, size = 38.dp)
-                Spacer(Modifier.width(8.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        starter.name,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp,
-                        maxLines = 1,
-                    )
-                    Row {
-                        Text(starter.team, color = TextPrimary, fontSize = 11.sp)
-                        Text(" vs ", color = TextMuted, fontSize = 11.sp)
-                        Text(starter.opponent, color = OpponentRed, fontSize = 11.sp)
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (starter.gameTimeLabel.isNotBlank()) {
-                            Icon(Icons.Outlined.Schedule, null, tint = TextMuted, modifier = Modifier.size(11.dp))
-                            Text(" ${starter.gameTimeLabel}", color = TextMuted, fontSize = 10.sp)
-                        }
-                    }
-                    if (starter.resultNote.isNotBlank()) {
-                        Text(starter.resultNote, color = TextMuted, fontSize = 10.sp)
-                    }
-                }
-                if (starter.ace) AceChip()
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Column {
-                    OutlookChip(starter.outlook)
-                    Text(
-                        text = (if (starter.outlookScore > 0) "+" else "") + starter.outlookScore,
-                        color = scoreColor,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                    )
-                }
-                if (starter.trend.size >= 2) {
-                    Sparkline(
-                        values = starter.trend,
-                        color = trendColor,
-                        modifier = Modifier
-                            .width(48.dp)
-                            .height(22.dp),
-                    )
-                }
-                StatCell(
-                    value = String.format(Locale.US, "%.1f%%", starter.projKPct),
-                    label = "PROJ K%",
+                Text(
+                    starter.name,
                     color = TextPrimary,
-                    modifier = Modifier.weight(1f),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
-                if (results) {
-                    ResultsCell(starter, modifier = Modifier.weight(1f))
-                } else {
-                    StatCell(
-                        value = String.format(Locale.US, "%.1f", starter.nextStartKs),
-                        label = "PROJ KS",
-                        color = AccentGreen,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                XwobaCell(starter.xwoba, modifier = Modifier.weight(1f))
+                Spacer(Modifier.width(6.dp))
+                OutlookChip(starter.outlook)
             }
-            Spacer(Modifier.height(8.dp))
-            WeatherCard(starter)
+            AwayAtHomeLine(
+                team = starter.team,
+                opponent = starter.opponent,
+                homeAway = starter.homeAway,
+                awayAbbr = starter.awayAbbr,
+                homeAbbr = starter.homeAbbr,
+                time = starter.gameTimeLabel,
+                opponentColor = oppColor,
+                fontSize = 11.sp,
+            )
+            if (starter.resultNote.isNotBlank()) {
+                Text(starter.resultNote, color = TextMuted, fontSize = 10.sp, maxLines = 1)
+            }
         }
-    }
-}
-
-@Composable
-private fun AceChip() {
-    Box(
-        modifier = Modifier
-            .background(AccentGreen.copy(alpha = 0.16f), RoundedCornerShape(6.dp))
-            .border(1.dp, AccentGreen.copy(alpha = 0.55f), RoundedCornerShape(6.dp))
-            .padding(horizontal = 7.dp, vertical = 2.dp),
-    ) {
-        Text("ACE", color = AccentGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp)
-    }
-}
-
-@Composable
-private fun StatCell(value: String, label: String, color: Color, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.Start) {
-        Text(value, color = color, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-        Text(label, color = TextMuted, fontSize = 8.sp, fontWeight = FontWeight.SemiBold)
-    }
-}
-
-@Composable
-private fun ResultsCell(starter: Starter, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.Start) {
-        if (starter.actualKs != null && starter.actualKPct != null) {
+        SelectedStat(starter, sortKey, results, Modifier.weight(0.85f))
+        Column(
+            horizontalAlignment = Alignment.End,
+            modifier = Modifier.padding(start = 4.dp),
+        ) {
+            Text("Weather boost", color = TextMuted, fontSize = 8.sp, fontWeight = FontWeight.Medium)
             Text(
-                String.format(Locale.US, "%.0f K", starter.actualKs.toFloat()),
-                color = TextPrimary,
-                fontWeight = FontWeight.SemiBold,
+                signedPct(starter.envBoostPct),
+                color = boostColor,
                 fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
             )
-            val dKs = starter.ksDelta
+        }
+        Spacer(Modifier.width(6.dp))
+        WeatherChip(starter)
+    }
+}
+
+@Composable
+private fun SelectedStat(
+    starter: Starter,
+    sortKey: StartersSort,
+    results: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val (label, value, sub) = when (sortKey) {
+        StartersSort.PROG -> Triple(
+            "Prog",
+            (if (starter.outlookScore > 0) "+" else "") + starter.outlookScore,
+            starter.outlook.name,
+        )
+        StartersSort.PROJ_KS -> Triple(
+            "Proj Ks",
+            String.format(Locale.US, "%.1f", starter.nextStartKs),
+            if (results && starter.actualKs != null) {
+                val d = starter.ksDelta
+                val act = String.format(Locale.US, "%.0f act", starter.actualKs.toFloat())
+                if (d != null) "$act · Δ ${String.format(Locale.US, "%+.1f", d)}" else act
+            } else {
+                null
+            },
+        )
+        StartersSort.XWOBA -> Triple(
+            "xwOBA",
+            starter.xwoba?.let { String.format(Locale.US, ".%03d", (it * 1000).toInt()) } ?: "—",
+            null,
+        )
+        StartersSort.PROJ_OUTS -> Triple(
+            "Proj Outs",
+            String.format(Locale.US, "%.1f", starter.projOuts),
+            if (starter.projIp > 0f) String.format(Locale.US, "~%.1f IP", starter.projIp) else null,
+        )
+    }
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.Center) {
+            Text(label, color = TextMuted, fontSize = 10.sp, modifier = Modifier.padding(end = 4.dp, bottom = 2.dp))
             Text(
-                if (dKs != null) String.format(Locale.US, "Δ %+.1f", dKs) else "ACT / Δ",
-                color = if (dKs != null && dKs >= 0) AccentGreen else RegRed,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Medium,
+                value,
+                color = TextPrimary,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                maxLines = 1,
             )
-        } else {
-            Text("—", color = TextMuted, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-            Text("ACT / Δ", color = TextMuted, fontSize = 8.sp, fontWeight = FontWeight.SemiBold)
+        }
+        if (sub != null) {
+            Text(sub, color = TextMuted, fontSize = 9.sp, maxLines = 1)
         }
     }
 }
 
 @Composable
-private fun XwobaCell(xwoba: Float?, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.Start) {
-        Text(
-            text = xwoba?.let { String.format(Locale.US, ".%03d", (it * 1000).toInt()) } ?: "—",
-            color = TextPrimary,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 13.sp,
-        )
-        Text("XWOBA · STATCAST", color = TextMuted, fontSize = 7.sp, fontWeight = FontWeight.SemiBold)
-    }
-}
-
-@Composable
-private fun WeatherCard(starter: Starter) {
-    val (tagLabel, tagColor) = when (starter.wxTag) {
-        WxTag.RAIN_RISK -> "RAIN RISK" to RegRed
-        WxTag.HR_WEATHER -> "HR WEATHER" to HrWeatherOrange
-        WxTag.PITCHER_WX -> "PITCHER WX" to AccentGreen
-        WxTag.NEUTRAL -> "NEUTRAL WX" to StableSlate
-    }
+private fun WeatherChip(starter: Starter) {
     val wxIcon = when (starter.weather) {
         Weather.SUN -> Icons.Outlined.WbSunny
         Weather.RAIN -> Icons.Outlined.Umbrella
         Weather.CLOUD -> Icons.Outlined.Cloud
     }
-    Row(
+    val tagColor = when (starter.wxTag) {
+        WxTag.RAIN_RISK -> RegRed
+        WxTag.HR_WEATHER -> HrWeatherOrange
+        WxTag.PITCHER_WX -> AccentGreen
+        WxTag.NEUTRAL -> StableSlate
+    }
+    Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, CardStroke, RoundedCornerShape(10.dp))
+            .widthIn(min = 78.dp)
             .background(NavySurface, RoundedCornerShape(10.dp))
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .border(1.dp, CardStroke, RoundedCornerShape(10.dp))
+            .padding(horizontal = 6.dp, vertical = 5.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        ParkDiamond(rel = starter.windRel, tag = starter.wxTag)
-        Spacer(Modifier.width(8.dp))
-        Column(Modifier.weight(1f)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            ParkDiamond(rel = starter.windRel, tag = starter.wxTag, diamondSize = 22.dp)
+            Spacer(Modifier.width(4.dp))
             Text(
                 starter.windLabel.ifBlank { "Wind n/a" },
                 color = TextPrimary,
-                fontSize = 11.sp,
+                fontSize = 8.sp,
                 fontWeight = FontWeight.Medium,
+                maxLines = 2,
+                lineHeight = 10.sp,
             )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(wxIcon, null, tint = tagColor, modifier = Modifier.size(12.dp))
-                if (starter.tempF > 0) {
-                    Text(" ${starter.tempF}°", color = TextMuted, fontSize = 11.sp)
-                } else {
-                    Text(" Temp n/a", color = TextMuted, fontSize = 11.sp)
-                }
-                if (starter.precipPct != null) {
-                    Text(
-                        "  ${starter.precipPct}% chance",
-                        color = RegRed,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-            }
-            if (starter.parkHint.isNotBlank()) {
-                Text(
-                    starter.parkHint,
-                    color = TextMuted,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-            }
-            val boostColor = when {
-                starter.wxTag == WxTag.RAIN_RISK -> RegRed
-                starter.envBoostPct > 3 -> HrWeatherOrange
-                starter.envBoostPct < -3 -> AccentGreen
-                else -> TextMuted
-            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(wxIcon, null, tint = tagColor, modifier = Modifier.size(11.dp))
             Text(
-                ParkWeather.boostLabel(starter.envBoostPct),
-                color = boostColor,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
+                if (starter.tempF > 0) " ${starter.tempF}°" else " n/a",
+                color = TextMuted,
+                fontSize = 10.sp,
             )
-            Spacer(Modifier.height(4.dp))
-            WxTagChip(tagLabel, tagColor)
         }
     }
 }
 
 @Composable
-private fun WxTagChip(label: String, color: Color) {
-    Box(
-        modifier = Modifier
-            .background(color.copy(alpha = 0.16f), RoundedCornerShape(6.dp))
-            .border(1.dp, color.copy(alpha = 0.55f), RoundedCornerShape(6.dp))
-            .padding(horizontal = 7.dp, vertical = 2.dp),
-    ) {
-        Text(label, color = color, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.4.sp)
-    }
-}
-
-@Composable
-private fun ParkDiamond(rel: WindRel, tag: WxTag) {
+private fun ParkDiamond(rel: WindRel, tag: WxTag, diamondSize: androidx.compose.ui.unit.Dp = 40.dp) {
     val arrow = when {
         rel == WindRel.IN_CF || rel == WindRel.IN_LF || rel == WindRel.IN_RF -> AccentGreen
         rel == WindRel.OUT_CF || rel == WindRel.OUT_LF || rel == WindRel.OUT_RF -> HrWeatherOrange
@@ -788,9 +693,9 @@ private fun ParkDiamond(rel: WindRel, tag: WxTag) {
         tag == WxTag.RAIN_RISK -> RegRed
         else -> TextMuted
     }
-    Canvas(Modifier.size(40.dp)) {
-        val w = size.width
-        val h = size.height
+    Canvas(Modifier.size(diamondSize)) {
+        val w = this.size.width
+        val h = this.size.height
         val home = Offset(w * 0.50f, h * 0.88f)
         val first = Offset(w * 0.88f, h * 0.50f)
         val second = Offset(w * 0.50f, h * 0.12f)
@@ -840,6 +745,8 @@ private fun ParkDiamond(rel: WindRel, tag: WxTag) {
         }
     }
 }
+
+private fun signedPct(pct: Int): String = if (pct > 0) "+$pct%" else "$pct%"
 
 private fun updatedLabel(instant: Instant): String {
     val local = instant.atZone(StartersRepository.SLATE_ZONE)

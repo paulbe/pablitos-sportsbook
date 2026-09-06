@@ -92,7 +92,7 @@ fun HomeScreen(onOpen: (Dest) -> Unit) {
             HomeTile(
                 icon = Icons.Outlined.Sports,
                 title = "Projected Starters",
-                subtitle = "Live MLB probables · PROG → REG",
+                subtitle = "Live MLB probables · Proj Ks · Proj Outs",
                 onClick = { onOpen(Dest.Starters) },
             )
             Spacer(Modifier.height(12.dp))

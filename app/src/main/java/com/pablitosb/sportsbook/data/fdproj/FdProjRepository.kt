@@ -25,6 +25,16 @@ class FdProjRepository(
                 ?: pitcher?.opponent
                 ?: game?.let { if (player.team == it.homeAbbr) it.awayAbbr else it.homeAbbr }
                 ?: ""
+            val awayAbbr = hitter?.awayAbbr?.ifBlank { null }
+                ?: pitcher?.awayAbbr?.ifBlank { null }
+                ?: game?.awayAbbr.orEmpty()
+            val homeAbbr = hitter?.homeAbbr?.ifBlank { null }
+                ?: pitcher?.homeAbbr?.ifBlank { null }
+                ?: game?.homeAbbr.orEmpty()
+            val homeAway = hitter?.homeAway?.ifBlank { null }
+                ?: pitcher?.homeAway?.ifBlank { null }
+                ?: game?.let { if (player.team == it.homeAbbr) "home" else "away" }
+                ?: ""
             val driver = when {
                 player.isPitcher && pitcher != null ->
                     String.format(Locale.US, "%.1f Proj Ks", pitcher.nextStartKs)
@@ -52,6 +62,9 @@ class FdProjRepository(
                 gameTimeLabel = game?.gameTimeLabel.orEmpty(),
                 driver = driver,
                 projTb = hitter?.expectedTb,
+                awayAbbr = awayAbbr,
+                homeAbbr = homeAbbr,
+                homeAway = homeAway,
             )
         }
         return FdProjBoard(

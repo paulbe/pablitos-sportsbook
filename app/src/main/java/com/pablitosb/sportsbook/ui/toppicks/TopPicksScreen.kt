@@ -52,9 +52,9 @@ import com.pablitosb.sportsbook.theme.CardFill
 import com.pablitosb.sportsbook.theme.CardStroke
 import com.pablitosb.sportsbook.theme.NavyBlack
 import com.pablitosb.sportsbook.theme.NavySurface
-import com.pablitosb.sportsbook.theme.OpponentRed
 import com.pablitosb.sportsbook.theme.TextMuted
 import com.pablitosb.sportsbook.theme.TextPrimary
+import com.pablitosb.sportsbook.ui.components.AwayAtHomeLine
 import com.pablitosb.sportsbook.ui.components.LiveBadge
 import com.pablitosb.sportsbook.ui.components.ScreenTopBar
 import com.pablitosb.sportsbook.ui.components.SectionRule
@@ -315,13 +315,21 @@ private fun PickRow(rank: Int, pick: TopPick, metricLabel: String) {
                     Text(pick.pos, color = AccentGreen, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                     Text("  ", color = TextMuted, fontSize = 11.sp)
                 }
-                Text(pick.team, color = TextPrimary, fontSize = 11.sp)
-                if (pick.opponent.isNotBlank()) {
-                    Text(" vs ", color = TextMuted, fontSize = 11.sp)
-                    Text(pick.opponent, color = OpponentRed, fontSize = 11.sp)
-                }
-                if (pick.gameTimeLabel.isNotBlank()) {
-                    Text("  ${pick.gameTimeLabel}", color = TextMuted, fontSize = 10.sp)
+                if (pick.opponent.isNotBlank() || pick.awayAbbr.isNotBlank()) {
+                    AwayAtHomeLine(
+                        team = pick.team,
+                        opponent = pick.opponent,
+                        homeAway = pick.homeAway,
+                        awayAbbr = pick.awayAbbr,
+                        homeAbbr = pick.homeAbbr,
+                        time = pick.gameTimeLabel,
+                        fontSize = 11.sp,
+                    )
+                } else {
+                    Text(pick.team, color = TextPrimary, fontSize = 11.sp)
+                    if (pick.gameTimeLabel.isNotBlank()) {
+                        Text("  ${pick.gameTimeLabel}", color = TextMuted, fontSize = 10.sp)
+                    }
                 }
             }
             if (pick.why.isNotBlank()) {

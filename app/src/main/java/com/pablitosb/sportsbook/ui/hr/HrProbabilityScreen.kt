@@ -60,11 +60,11 @@ import com.pablitosb.sportsbook.theme.CardFill
 import com.pablitosb.sportsbook.theme.ChipFill
 import com.pablitosb.sportsbook.theme.MatchupBlue
 import com.pablitosb.sportsbook.theme.NavyBlack
-import com.pablitosb.sportsbook.theme.OpponentRed
 import com.pablitosb.sportsbook.theme.ParkPurple
 import com.pablitosb.sportsbook.theme.RegRed
 import com.pablitosb.sportsbook.theme.TextMuted
 import com.pablitosb.sportsbook.theme.TextPrimary
+import com.pablitosb.sportsbook.ui.components.AwayAtHomeLine
 import com.pablitosb.sportsbook.ui.components.LiveBadge
 import com.pablitosb.sportsbook.ui.components.PlayerAvatar
 import com.pablitosb.sportsbook.ui.components.ScreenTopBar
@@ -266,11 +266,16 @@ private fun HrRow(batter: HrBatter) {
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text(batter.name, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                Row {
-                    Text(batter.team, color = TextPrimary, fontSize = 11.sp)
-                    Text(" vs ", color = TextMuted, fontSize = 11.sp)
-                    Text("${batter.opponent} ", color = OpponentRed, fontSize = 11.sp)
-                    Text(batter.pitcherHand, color = MatchupBlue, fontSize = 11.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AwayAtHomeLine(
+                        team = batter.team,
+                        opponent = batter.opponent,
+                        homeAway = batter.homeAway,
+                        awayAbbr = batter.awayAbbr,
+                        homeAbbr = batter.homeAbbr,
+                        fontSize = 11.sp,
+                    )
+                    Text("  ${batter.pitcherHand}", color = MatchupBlue, fontSize = 11.sp)
                 }
                 val extra = buildList {
                     if (batter.battingOrder != null) add("#${batter.battingOrder}")

@@ -42,6 +42,11 @@ object OutlookCalculator {
         val recentBf: Int,
         val lastStartBf: Int?,
         val lastStartKs: List<Float>,
+        val seasonIp: Float = 0f,
+        val recentIp: Float = 0f,
+        val recentGs: Int = 0,
+        val lastStartIp: Float? = null,
+        val last5Ip: List<Float> = emptyList(),
     )
 
     data class Projection(

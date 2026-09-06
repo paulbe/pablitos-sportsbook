@@ -25,6 +25,9 @@ data class FdProjRow(
     val driver: String,
     val ownPlaceholder: String = "—",
     val projTb: Float? = null,
+    val awayAbbr: String = "",
+    val homeAbbr: String = "",
+    val homeAway: String = "",
 )
 
 data class FdProjBoard(

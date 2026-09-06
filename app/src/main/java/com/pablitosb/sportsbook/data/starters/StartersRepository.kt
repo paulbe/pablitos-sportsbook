@@ -1,9 +1,13 @@
 package com.pablitosb.sportsbook.data.starters
 
+import com.pablitosb.sportsbook.data.mlb.OppKScale
 import com.pablitosb.sportsbook.data.mlb.ParkFactors
 import com.pablitosb.sportsbook.data.mlb.ParkSites
+import com.pablitosb.sportsbook.data.mlb.StatMath
+import com.pablitosb.sportsbook.data.mlb.TeamOffense
 import com.pablitosb.sportsbook.data.model.Starter
 import com.pablitosb.sportsbook.data.model.Weather
+import com.pablitosb.sportsbook.data.model.WxTag
 import com.pablitosb.sportsbook.data.remote.MlbStatsClient
 import com.pablitosb.sportsbook.data.remote.OpenMeteoClient
 import com.pablitosb.sportsbook.data.remote.SavantExpectedClient
@@ -39,6 +43,7 @@ data class StartersBoard(
     val reconstructed: Boolean,
     val postponedCount: Int = 0,
     val emptyReason: String? = null,
+    val oppKScale: OppKScale = OppKScale.fallback(),
 )
 
 class StartersLoadException(message: String, cause: Throwable? = null) : Exception(message, cause)
@@ -88,15 +93,17 @@ class StartersRepository(
         }
         val logsById = fetchGameLogs(usable.map { it.mlbId }, slate.year)
         val xwobaById = runCatching { savant.pitcherXwoba(slate.year) }.getOrDefault(emptyMap())
+        val offense = loadTeamOffense(slate.year)
+        val oppKScale = OppKScale.fromRates(offense.values.map { it.kRate })
         val projected = usable.map { row ->
             val sample = sampleAsOf(logsById[row.mlbId].orEmpty(), slate)
             val projection = OutlookCalculator.project(sample)
-            row to projection
+            Triple(row, projection, sample)
         }.sortedWith(
-            compareByDescending<Pair<RawStarter, OutlookCalculator.Projection>> { it.second.outlookScore }
+            compareByDescending<Triple<RawStarter, OutlookCalculator.Projection, OutlookCalculator.PitchingSample?>> { it.second.outlookScore }
                 .thenByDescending { it.second.projK },
         )
-        val starters = projected.mapIndexed { index, (row, projection) ->
+        val starters = projected.mapIndexed { index, (row, projection, sample) ->
             val predKs = projection.nextStartKs
             val predKPct = projection.projK * 100f
             val dayLog = logsById[row.mlbId].orEmpty().firstOrNull { log ->
@@ -108,6 +115,20 @@ class StartersRepository(
                 actualKs.toFloat() / actualBf * 100f
             } else {
                 null
+            }
+            val opp = offense[row.opponent.uppercase(Locale.US)]
+            val outs = ProjOutsCalculator.project(
+                sample?.workload(),
+                ProjOutsCalculator.Context(
+                    opponent = opp,
+                    envBoostPct = row.wx.envBoostPct,
+                    rain = row.wx.tag == WxTag.RAIN_RISK,
+                ),
+            )
+            val (awayAbbr, homeAbbr) = if (row.homeAway == "home") {
+                row.opponent to row.team
+            } else {
+                row.team to row.opponent
             }
             Starter(
                 rank = index + 1,
@@ -143,6 +164,11 @@ class StartersRepository(
                 parkHint = row.wx.parkHint,
                 envBoostPct = row.wx.envBoostPct,
                 gameStart = row.gameStart,
+                projIp = outs.projIp,
+                projOuts = outs.projOuts,
+                oppKRate = opp?.kRate,
+                awayAbbr = awayAbbr,
+                homeAbbr = homeAbbr,
             )
         }
         StartersBoard(
@@ -153,7 +179,38 @@ class StartersRepository(
             sourceLabel = if (resultsMode) "Results · pred vs actual" else "Live slate",
             reconstructed = resultsMode,
             postponedCount = postponed,
+            oppKScale = oppKScale,
         )
+    }
+
+    private fun loadTeamOffense(season: Int): Map<String, TeamOffense> {
+        val primary = runCatching { fetchTeamOffense(season) }.getOrDefault(emptyMap())
+        if (primary.size >= 20) return primary
+        val prior = runCatching { fetchTeamOffense(season - 1) }.getOrDefault(emptyMap())
+        return if (prior.size > primary.size) prior else primary
+    }
+
+    private fun fetchTeamOffense(season: Int): Map<String, TeamOffense> {
+        val json = api.getJson(
+            "/api/v1/teams/stats?sportIds=1&season=$season&group=hitting&stats=season",
+        )
+        return json.optArr("stats").toObjList()
+            .flatMap { it.optArr("splits").toObjList() }
+            .mapNotNull { split ->
+                val abbr = split.optObj("team")?.optString("abbreviation")
+                    ?.ifBlank { null }
+                    ?.uppercase(Locale.US)
+                    ?: return@mapNotNull null
+                val stat = split.optObj("stat") ?: return@mapNotNull null
+                val so = stat.optIntOrNull("strikeOuts") ?: return@mapNotNull null
+                val pa = stat.optIntOrNull("plateAppearances") ?: return@mapNotNull null
+                if (pa < 50) return@mapNotNull null
+                abbr to TeamOffense(
+                    kRate = so.toFloat() / pa,
+                    ops = stat.optFloatish("ops"),
+                    pa = pa,
+                )
+            }.toMap()
     }
 
     private fun loadTeamAbbrevs(): Map<Int, String> {
@@ -371,6 +428,9 @@ class StartersRepository(
         val pitches = prior.sumOf { it.optObj("stat")?.optIntOrNull("numberOfPitches") ?: 0 }
         val strikePct = if (pitches > 0) strikes.toFloat() / pitches else null
         val recent = starts.takeLast(RECENT_STARTS)
+        val startIp = starts.map { StatMath.parseInnings(it.optObj("stat")?.optString("inningsPitched")) }
+        val recentIpList = recent.map { StatMath.parseInnings(it.optObj("stat")?.optString("inningsPitched")) }
+        val recentIp = recentIpList.sum()
         return OutlookCalculator.PitchingSample(
             seasonSo = seasonSo,
             seasonBf = seasonBf,
@@ -380,8 +440,23 @@ class StartersRepository(
             recentBf = recent.sumOf { it.optObj("stat")?.optIntOrNull("battersFaced") ?: 0 },
             lastStartBf = recent.lastOrNull()?.optObj("stat")?.optIntOrNull("battersFaced"),
             lastStartKs = starts.takeLast(6).map { (it.optObj("stat")?.optIntOrNull("strikeOuts") ?: 0).toFloat() },
+            seasonIp = startIp.sum(),
+            recentIp = recentIp,
+            recentGs = recent.size,
+            lastStartIp = recentIpList.lastOrNull()?.takeIf { it > 0f },
+            last5Ip = recentIpList,
         )
     }
+
+    private fun OutlookCalculator.PitchingSample.workload(): ProjOutsCalculator.Workload =
+        ProjOutsCalculator.Workload(
+            seasonIp = seasonIp,
+            seasonGs = seasonGs,
+            recentIp = recentIp,
+            recentGs = recentGs,
+            lastStartIp = lastStartIp,
+            last5Ip = last5Ip,
+        )
 
     private fun logDate(split: JSONObject): LocalDate? =
         runCatching { LocalDate.parse(split.optString("date")) }.getOrNull()

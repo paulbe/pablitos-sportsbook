@@ -7,7 +7,7 @@ props board, and **Today’s Top Picks** (SP Ks · HR · TB · FD value). Dark n
 ## Home
 
 **Stable**
-1. **Projected Starters** — live MLB probables, outlook, weather/park, xwOBA, sort
+1. **Projected Starters** — live MLB probables, single-stat filters (Prog · Proj Ks · xwOBA · Proj Outs), Weather boost, AWAY @ HOME
 2. **Daily HR Probability** — live lineups, game HR%
 3. **Today’s Top Picks** — SP Ks · HR · TB · FD value
 4. **Beta** — submenu for work-in-progress boards
@@ -94,12 +94,49 @@ The bundled EXAMPLE file uses the same schema.
 - Timezone for “today”: **America/Los_Angeles**.
 - Top Picks FD value uses EXAMPLE salaries (same as Option 5) unless a CSV was imported there.
 - Proj TB is not Statcast xTB — season rates plus the existing park/pitcher/weather stack.
-- TB is an Option 6 formula only. There is no standalone Total Bases home tile.
+- TB is a Today’s Top Picks formula only. There is no standalone Total Bases home tile.
+- DFS Lineups, Underdog Props, and FD DFS Projections live under **Beta**, not on the main home list.
+- Proj Outs is a local IP model (recent/season logs + opponent OPS + Weather boost + early exits), not Statcast or a pitch-count feed.
+- Opponent K colors use season team SO/PA. Sparse seasons fall back to 21.6% / 23.4%. Retractable roofs stay outdoor unless MLB says closed.
 
-## Option 1 weather (unchanged)
+## Option 1 — Projected Starters
+
+Single-stat rows. Filters (tap again to reverse): **Prog · Proj Ks · xwOBA · Proj Outs**.
+Time and Boost are not sort tabs. Persistent on every row: name, **AWAY @ HOME** + first pitch,
+PROG/STABLE/REG badge, **Weather boost** %, weather chip.
+
+**Opponent color** tints only the opponent abbreviation (pitcher’s club stays white):
+
+| Color | Team K% (SO/PA) |
+| --- | --- |
+| Red | low — below the 33rd percentile |
+| Grey | middle tertile |
+| Green | high — above the 67th percentile |
+
+Cuts come from this season’s 30-team distribution when at least 20 clubs are loaded.
+Fallback (2024–25 tertile-style): **red < 21.6%**, **green > 23.4%**. A legend is on the screen.
+
+**Proj Outs** = matchup-adjusted IP × 3:
+
+```
+baseIp   = shrink(0.55·recent IP/GS + 0.45·season IP/GS, GS, league 5.40, prior 8 GS)
+oppMult  = 1 − (opp OPS − 0.711) × 0.40
+wxMult   = rain ? 0.86 : 1 − WeatherBoost% × 0.22
+workMult = early-exit / heavy-workload haircut
+projIp   = clamp(base × opp × wx × work, 3.5 … 7.2)
+projOuts = projIp × 3
+```
+
+Optional `~IP` subtitle under the outs figure.
+
+## Option 1 weather
 
 Open-Meteo hourly at park lat/long. MLB `azimuthAngle` for wind vs CF.
-Static multi-year **HR park factor** blended into tags + boost.
+Static multi-year **HR park factor** blended into tags + Weather boost.
+
+## Matchups
+
+Every game line is **AWAY @ HOME**. The app does not show `vs` for team matchups.
 
 ## Run locally
 

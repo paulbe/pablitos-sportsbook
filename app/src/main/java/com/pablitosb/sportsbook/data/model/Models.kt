@@ -38,6 +38,11 @@ data class Starter(
     val parkHint: String = "",
     val envBoostPct: Int = 0,
     val gameStart: Instant? = null,
+    val projIp: Float = 0f,
+    val projOuts: Float = 0f,
+    val oppKRate: Float? = null,
+    val awayAbbr: String = "",
+    val homeAbbr: String = "",
 )
 
 enum class Weather { SUN, CLOUD, RAIN }
@@ -67,6 +72,9 @@ data class HrBatter(
     val battingOrder: Int? = null,
     val sourceNote: String = "",
     val expectedPa: Float = 0f,
+    val awayAbbr: String = "",
+    val homeAbbr: String = "",
+    val homeAway: String = "",
 )
 
 data class DfsPlayer(

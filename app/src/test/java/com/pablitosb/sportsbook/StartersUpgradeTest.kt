@@ -367,7 +367,7 @@ class StartersUpgradeTest {
             hrParkFactor = 1.28f,
         )
         assertEquals(28, boost)
-        assertEquals("Boost +28%", ParkWeather.boostLabel(boost))
+        assertEquals("Weather boost +28%", ParkWeather.boostLabel(boost))
     }
 
     @Test
@@ -381,7 +381,7 @@ class StartersUpgradeTest {
             hrParkFactor = 0.90f,
         )
         assertEquals(-21, boost)
-        assertEquals("Boost -21%", ParkWeather.boostLabel(boost))
+        assertEquals("Weather boost -21%", ParkWeather.boostLabel(boost))
     }
 
     @Test
@@ -412,27 +412,15 @@ class StartersUpgradeTest {
     }
 
     @Test
-    fun sortBoostRainAlwaysLast() {
+    fun sortProjKsAndProjOuts() {
         val list = listOf(
-            sp("Rain", boost = -30, rain = true),
-            sp("Hit", boost = 18),
-            sp("Pitch", boost = -12),
+            sp("Ace", ks = 8.2f, outs = 18.6f),
+            sp("Soft", ks = 4.1f, outs = 14.1f),
         )
-        val desc = StartersSorter.sort(list, StartersSort.BOOST, ascending = false)
-        assertEquals(listOf("Hit", "Pitch", "Rain"), desc.map { it.name })
-        val asc = StartersSorter.sort(list, StartersSort.BOOST, ascending = true)
-        assertEquals(listOf("Pitch", "Hit", "Rain"), asc.map { it.name })
-    }
-
-    @Test
-    fun sortProjKsAndTime() {
-        val early = Instant.parse("2026-09-05T17:00:00Z")
-        val late = Instant.parse("2026-09-05T23:00:00Z")
-        val list = listOf(sp("Ace", ks = 8.2f, start = late), sp("Soft", ks = 4.1f, start = early))
         assertEquals("Ace", StartersSorter.sort(list, StartersSort.PROJ_KS, false).first().name)
         assertEquals("Soft", StartersSorter.sort(list, StartersSort.PROJ_KS, true).first().name)
-        assertEquals("Soft", StartersSorter.sort(list, StartersSort.TIME, true).first().name)
-        assertEquals("Ace", StartersSorter.sort(list, StartersSort.TIME, false).first().name)
+        assertEquals("Ace", StartersSorter.sort(list, StartersSort.PROJ_OUTS, false).first().name)
+        assertEquals("Soft", StartersSorter.sort(list, StartersSort.PROJ_OUTS, true).first().name)
     }
 
     private fun sp(
@@ -443,6 +431,7 @@ class StartersUpgradeTest {
         boost: Int = 0,
         rain: Boolean = false,
         start: Instant? = null,
+        outs: Float = 15f,
     ) = Starter(
         rank = 1,
         name = name,
@@ -460,5 +449,7 @@ class StartersUpgradeTest {
         wxTag = if (rain) WxTag.RAIN_RISK else WxTag.NEUTRAL,
         envBoostPct = boost,
         gameStart = start,
+        projOuts = outs,
+        projIp = outs / 3f,
     )
 }

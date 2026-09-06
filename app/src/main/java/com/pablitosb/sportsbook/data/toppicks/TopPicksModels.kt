@@ -23,6 +23,9 @@ data class TopPick(
     val metricValue: Float,
     val why: String,
     val gameTimeLabel: String = "",
+    val awayAbbr: String = "",
+    val homeAbbr: String = "",
+    val homeAway: String = "",
 )
 
 data class TopPicksBoard(
@@ -68,6 +71,9 @@ object TopPicksSelector {
                     metricValue = s.nextStartKs,
                     why = whyK(s),
                     gameTimeLabel = s.gameTimeLabel,
+                    awayAbbr = s.awayAbbr,
+                    homeAbbr = s.homeAbbr,
+                    homeAway = s.homeAway,
                 )
             }
     }
@@ -87,6 +93,9 @@ object TopPicksSelector {
                     metricValue = b.gameHrPct,
                     why = whyHr(b),
                     gameTimeLabel = "",
+                    awayAbbr = b.awayAbbr,
+                    homeAbbr = b.homeAbbr,
+                    homeAway = b.homeAway,
                 )
             }
     }
@@ -113,6 +122,9 @@ object TopPicksSelector {
                 metricValue = if (hasValue) row.value ?: row.proj else row.proj,
                 why = whyFd(row, hasValue),
                 gameTimeLabel = row.gameTimeLabel,
+                awayAbbr = row.awayAbbr,
+                homeAbbr = row.homeAbbr,
+                homeAway = row.homeAway,
             )
         }
         return picks to hasValue
@@ -133,6 +145,9 @@ object TopPicksSelector {
                     metricValue = b.projTb,
                     why = whyTb(b),
                     gameTimeLabel = "",
+                    awayAbbr = b.awayAbbr,
+                    homeAbbr = b.homeAbbr,
+                    homeAway = b.homeAway,
                 )
             }
     }
