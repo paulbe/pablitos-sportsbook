@@ -33,12 +33,15 @@ object StartersSorter {
                 compareBy<Starter> { it.xwoba == null }.thenBy { it.xwoba ?: Float.MAX_VALUE },
             )
             StartersSort.PROJ_OUTS -> starters.sortedByDescending { it.projOuts }
-            StartersSort.PROJ_FD -> starters.sortedWith(
-                compareByDescending<Starter> { it.fdProj }.thenByDescending { it.fdCeiling },
-            )
+            StartersSort.PROJ_FD -> {
+                val byProj = compareBy<Starter> { it.fdProj }.thenBy { it.fdCeiling }
+                // Default is high → low (ascending == false).
+                starters.sortedWith(if (ascending) byProj else byProj.reversed())
+            }
         }
         val needsFlip = when (key) {
-            StartersSort.PROG, StartersSort.PROJ_KS, StartersSort.PROJ_OUTS, StartersSort.PROJ_FD -> ascending
+            StartersSort.PROG, StartersSort.PROJ_KS, StartersSort.PROJ_OUTS -> ascending
+            StartersSort.PROJ_FD -> false
             StartersSort.XWOBA -> !ascending
         }
         return if (needsFlip) {

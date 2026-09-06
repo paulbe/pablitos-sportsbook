@@ -430,8 +430,16 @@ class StartersUpgradeTest {
             sp("Ace", fdProj = 42f, fdCeil = 60f),
             sp("SameProjHighCeil", fdProj = 36f, fdCeil = 62f),
         )
+        assertEquals(false, StartersSorter.defaultAscending(StartersSort.PROJ_FD))
         val sorted = StartersSorter.sort(list, StartersSort.PROJ_FD, ascending = false)
         assertEquals(listOf("Ace", "SameProjHighCeil", "Mid"), sorted.map { it.name })
+        val defaulted = StartersSorter.sort(
+            list,
+            StartersSort.PROJ_FD,
+            StartersSorter.defaultAscending(StartersSort.PROJ_FD),
+        )
+        assertEquals("Ace", defaulted.first().name)
+        assertTrue(defaulted[0].fdProj >= defaulted[1].fdProj)
     }
 
     private fun sp(

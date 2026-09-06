@@ -46,7 +46,7 @@ fun SettingsScreen(onBack: () -> Unit) {
         "Beta menu" to "DFS Lineups · Underdog Props · FD DFS Projections",
         "Today’s Top Picks" to "SP Ks · HR · TB · FD value",
         "TB formula" to "PA × (1·1B + 2·2B + 3·3B + 4·HR) · park/pitcher/weather",
-        "Version" to "1.17.0 (v0.1.17-debug)",
+        "Version" to "1.18.0 (v0.1.18-debug)",
     )
     Column(
         modifier = Modifier

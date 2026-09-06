@@ -55,7 +55,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pablitosb.sportsbook.data.mlb.OppKScale
 import com.pablitosb.sportsbook.data.mlb.OppKTier
 import com.pablitosb.sportsbook.data.model.Starter
-import com.pablitosb.sportsbook.data.model.WxTag
 import com.pablitosb.sportsbook.data.starters.SlateMode
 import com.pablitosb.sportsbook.data.starters.StartersRepository
 import com.pablitosb.sportsbook.data.starters.StartersSort
@@ -487,10 +486,9 @@ private fun StarterRow(
         OppKTier.MID, OppKTier.UNKNOWN -> StableSlate
     }
     val boostColor = when {
-        starter.wxTag == WxTag.RAIN_RISK -> RegRed
-        starter.envBoostPct > 3 -> AccentGreen
-        starter.envBoostPct < -3 -> AccentGreen
-        else -> AccentGreen
+        starter.envBoostPct > 0 -> AccentGreen
+        starter.envBoostPct < 0 -> RegRed
+        else -> TextMuted
     }
     Row(
         modifier = Modifier
