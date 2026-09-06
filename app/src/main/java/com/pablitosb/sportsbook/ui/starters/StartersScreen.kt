@@ -1,6 +1,5 @@
 package com.pablitosb.sportsbook.ui.starters
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -27,10 +25,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Umbrella
-import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -48,11 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,20 +52,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pablitosb.sportsbook.data.mlb.OppKScale
 import com.pablitosb.sportsbook.data.mlb.OppKTier
-import com.pablitosb.sportsbook.data.model.Outlook
 import com.pablitosb.sportsbook.data.model.Starter
-import com.pablitosb.sportsbook.data.model.Weather
-import com.pablitosb.sportsbook.data.model.WindRel
 import com.pablitosb.sportsbook.data.model.WxTag
 import com.pablitosb.sportsbook.data.starters.SlateMode
 import com.pablitosb.sportsbook.data.starters.StartersRepository
 import com.pablitosb.sportsbook.data.starters.StartersSort
 import com.pablitosb.sportsbook.data.starters.StartersSorter
 import com.pablitosb.sportsbook.theme.AccentGreen
-import com.pablitosb.sportsbook.theme.CardStroke
-import com.pablitosb.sportsbook.theme.HrWeatherOrange
 import com.pablitosb.sportsbook.theme.NavyBlack
-import com.pablitosb.sportsbook.theme.NavySurface
 import com.pablitosb.sportsbook.theme.OpponentRed
 import com.pablitosb.sportsbook.theme.RegRed
 import com.pablitosb.sportsbook.theme.StableSlate
@@ -90,9 +75,6 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.sin
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -309,7 +291,13 @@ private fun ReadyList(state: StartersUiState.Ready, viewModel: StartersViewModel
             Spacer(Modifier.height(14.dp))
             OppKLegend(board.oppKScale)
             Spacer(Modifier.height(10.dp))
-            WeatherLegend()
+            Text(
+                "Weather boost is park + Open-Meteo wind/temp (positive = hitter-friendly). " +
+                    "Raw wind, temp, and rain chips are not shown on rows.",
+                color = TextMuted,
+                fontSize = 10.sp,
+                lineHeight = 14.sp,
+            )
             Spacer(Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.Top) {
                 Icon(Icons.Outlined.Info, null, tint = AccentGreen, modifier = Modifier.size(14.dp))
@@ -409,36 +397,6 @@ private fun OppKLegend(scale: OppKScale) {
         Text(scale.legend(), color = TextMuted, fontSize = 10.sp, lineHeight = 14.sp)
         Text(
             "Pitcher’s club is always white. Only the opponent abbreviation is colored.",
-            color = TextMuted,
-            fontSize = 10.sp,
-            lineHeight = 14.sp,
-        )
-    }
-}
-
-@Composable
-private fun WeatherLegend() {
-    Column {
-        Text(
-            "WEATHER CHIP",
-            color = TextMuted,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 0.6.sp,
-        )
-        Spacer(Modifier.height(6.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            LegendSwatch(RegRed, "RAIN RISK")
-            LegendSwatch(HrWeatherOrange, "HR WEATHER")
-        }
-        Spacer(Modifier.height(4.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            LegendSwatch(AccentGreen, "PITCHER WX")
-            LegendSwatch(StableSlate, "NEUTRAL WX")
-        }
-        Spacer(Modifier.height(4.dp))
-        Text(
-            "Weather boost is a persistent park + wind + temp % (not a filter). Rain is weather-only.",
             color = TextMuted,
             fontSize = 10.sp,
             lineHeight = 14.sp,
@@ -583,8 +541,6 @@ private fun StarterRow(
                 fontWeight = FontWeight.Bold,
             )
         }
-        Spacer(Modifier.width(6.dp))
-        WeatherChip(starter)
     }
 }
 
@@ -636,112 +592,6 @@ private fun SelectedStat(
         }
         if (sub != null) {
             Text(sub, color = TextMuted, fontSize = 9.sp, maxLines = 1)
-        }
-    }
-}
-
-@Composable
-private fun WeatherChip(starter: Starter) {
-    val wxIcon = when (starter.weather) {
-        Weather.SUN -> Icons.Outlined.WbSunny
-        Weather.RAIN -> Icons.Outlined.Umbrella
-        Weather.CLOUD -> Icons.Outlined.Cloud
-    }
-    val tagColor = when (starter.wxTag) {
-        WxTag.RAIN_RISK -> RegRed
-        WxTag.HR_WEATHER -> HrWeatherOrange
-        WxTag.PITCHER_WX -> AccentGreen
-        WxTag.NEUTRAL -> StableSlate
-    }
-    Column(
-        modifier = Modifier
-            .widthIn(min = 78.dp)
-            .background(NavySurface, RoundedCornerShape(10.dp))
-            .border(1.dp, CardStroke, RoundedCornerShape(10.dp))
-            .padding(horizontal = 6.dp, vertical = 5.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            ParkDiamond(rel = starter.windRel, tag = starter.wxTag, diamondSize = 22.dp)
-            Spacer(Modifier.width(4.dp))
-            Text(
-                starter.windLabel.ifBlank { "Wind n/a" },
-                color = TextPrimary,
-                fontSize = 8.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 2,
-                lineHeight = 10.sp,
-            )
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(wxIcon, null, tint = tagColor, modifier = Modifier.size(11.dp))
-            Text(
-                if (starter.tempF > 0) " ${starter.tempF}°" else " n/a",
-                color = TextMuted,
-                fontSize = 10.sp,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ParkDiamond(rel: WindRel, tag: WxTag, diamondSize: androidx.compose.ui.unit.Dp = 40.dp) {
-    val arrow = when {
-        rel == WindRel.IN_CF || rel == WindRel.IN_LF || rel == WindRel.IN_RF -> AccentGreen
-        rel == WindRel.OUT_CF || rel == WindRel.OUT_LF || rel == WindRel.OUT_RF -> HrWeatherOrange
-        rel == WindRel.CROSS_LR || rel == WindRel.CROSS_RL -> StableSlate
-        tag == WxTag.RAIN_RISK -> RegRed
-        else -> TextMuted
-    }
-    Canvas(Modifier.size(diamondSize)) {
-        val w = this.size.width
-        val h = this.size.height
-        val home = Offset(w * 0.50f, h * 0.88f)
-        val first = Offset(w * 0.88f, h * 0.50f)
-        val second = Offset(w * 0.50f, h * 0.12f)
-        val third = Offset(w * 0.12f, h * 0.50f)
-        val lf = Offset(w * 0.22f, h * 0.22f)
-        val rf = Offset(w * 0.78f, h * 0.22f)
-        val diamond = Path().apply {
-            moveTo(home.x, home.y)
-            lineTo(first.x, first.y)
-            lineTo(second.x, second.y)
-            lineTo(third.x, third.y)
-            close()
-        }
-        drawPath(diamond, AccentGreen.copy(alpha = 0.08f))
-        drawPath(diamond, CardStroke, style = Stroke(width = 1.6.dp.toPx()))
-        val pair = when (rel) {
-            WindRel.IN_CF -> second to home
-            WindRel.OUT_CF -> home to second
-            WindRel.IN_LF -> lf to home
-            WindRel.OUT_LF -> home to lf
-            WindRel.IN_RF -> rf to home
-            WindRel.OUT_RF -> home to rf
-            WindRel.CROSS_LR -> third to first
-            WindRel.CROSS_RL -> first to third
-            else -> null
-        }
-        if (pair != null) {
-            val (from, to) = pair
-            drawLine(arrow, from, to, strokeWidth = 2.4.dp.toPx(), cap = StrokeCap.Round)
-            val angle = atan2(to.y - from.y, to.x - from.x)
-            val head = 6.dp.toPx()
-            val left = Offset(
-                to.x - head * cos(angle - 0.45f),
-                to.y - head * sin(angle - 0.45f),
-            )
-            val right = Offset(
-                to.x - head * cos(angle + 0.45f),
-                to.y - head * sin(angle + 0.45f),
-            )
-            val tip = Path().apply {
-                moveTo(to.x, to.y)
-                lineTo(left.x, left.y)
-                lineTo(right.x, right.y)
-                close()
-            }
-            drawPath(tip, arrow)
         }
     }
 }

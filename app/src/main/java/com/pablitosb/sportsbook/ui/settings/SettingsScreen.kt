@@ -45,7 +45,7 @@ fun SettingsScreen(onBack: () -> Unit) {
         "Beta menu" to "DFS Lineups · Underdog Props · FD DFS Projections",
         "Today’s Top Picks" to "SP Ks · HR · TB · FD value",
         "TB formula" to "PA × (1·1B + 2·2B + 3·3B + 4·HR) · park/pitcher/weather",
-        "Version" to "1.15.0 (v0.1.15-debug)",
+        "Version" to "1.16.0 (v0.1.16-debug)",
     )
     Column(
         modifier = Modifier
@@ -77,7 +77,7 @@ fun SettingsScreen(onBack: () -> Unit) {
         }
         Spacer(Modifier.height(16.dp))
         Text(
-            "Starters rows show one selected stat plus Weather boost and a weather chip. Opponent abbreviation is colored by team K% tertiles. Rain is weather-only. Pitcher xwOBA is season-to-date Savant (missing = —).",
+            "Starters rows show one selected stat plus Weather boost %. Raw wind/temp/rain chips are hidden. Opponent abbreviation is colored by team K% tertiles. Pitcher xwOBA is season-to-date Savant (missing = —).",
             color = AccentGreen,
             fontSize = 12.sp,
         )

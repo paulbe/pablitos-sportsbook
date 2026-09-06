@@ -103,7 +103,7 @@ The bundled EXAMPLE file uses the same schema.
 
 Single-stat rows. Filters (tap again to reverse): **Prog · Proj Ks · xwOBA · Proj Outs**.
 Time and Boost are not sort tabs. Persistent on every row: name, **AWAY @ HOME** + first pitch,
-PROG/STABLE/REG badge, **Weather boost** %, weather chip.
+PROG/STABLE/REG badge, **Weather boost** %. Raw wind, temp, and rain details stay off the row.
 
 **Opponent color** tints only the opponent abbreviation (pitcher’s club stays white):
 
