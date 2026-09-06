@@ -3,14 +3,14 @@
 Android app for **today’s MLB slate** — live projected starters, **Daily Batters**
 (Game HR% · Proj FD · Proj TB · H+R+RBI), FanDuel classic DFS lineups, a
 **FanDuel DFS projections board**, an Underdog-style props board, and
-**Today’s Top Picks** (SP Ks · HR · TB · FD value). Dark navy + green.
+**Today’s Top Picks** (Pitchers | Batters, same filters as the two boards). Dark navy + green.
 
 ## Home
 
 **Stable**
 1. **Projected Starters** — live MLB probables, filters (Prog · Proj Ks · xwOBA · Proj Outs · Proj FD), Weather boost, AWAY @ HOME
 2. **Daily Batters** — live lineups, Game HR% · Proj FD · Proj TB · H+R+RBI, Weather boost, AWAY @ HOME
-3. **Today’s Top Picks** — SP Ks · HR · TB · FD value
+3. **Today’s Top Picks** — Pitchers | Batters digest (same filters as Starters / Daily Batters)
 4. **Beta** — submenu for work-in-progress boards
 
 **Beta menu**
@@ -22,22 +22,26 @@ Footer: **Models** · **Settings**. DFS / Props / FD projections are no longer p
 
 ## Today’s Top Picks
 
-A daily digest of four live formulas. Default date is **America/Los_Angeles** today.
+A ranked “best of today” board. Same models as **Projected Starters** and
+**Daily Batters** — not a third projection engine. Default date is
+**America/Los_Angeles** today. Top **10** of the active filter.
 
-| Section | How it’s chosen |
-| --- | --- |
-| **Top SP K spots** | Live Projected Starters, rain last, then **Proj Ks**, then outlook |
-| **Top HR spots** | Daily Batters, ranked by **game HR%** |
-| **Top TB spots** | Expected total bases: `TB ≈ PA × (1·1B + 2·2B + 3·3B + 4·HR) / PA` |
-| **Top FD value** | FD DFS Projections: **pts/$1k** when salary exists, else Proj FD pts |
+1. **Pitchers | Batters** segment
+2. Filters switch with the segment
 
-**TB formula** (Option 6 only — not a standalone home screen): season 1B/2B/3B/HR
-rates from the MLB Stats API, shrunk toward league priors (80 PA). HR/PA uses
-Daily HR `p_PA` (park × weather × pitcher HR/9 × platoon). Doubles/triples get a
-muted tilt; singles stay nearly park-neutral. FD DFS Projections still show
-Proj TB on hitter rows.
+| Side | Filters | Sort |
+| --- | --- | --- |
+| **Pitchers** | Prog · Proj Ks · xwOBA · Proj Outs · Proj FD | same as Option 1 (xwOBA lower is better) |
+| **Batters** | Game HR% · Proj FD · Proj TB · H+R+RBI | same as Option 2 (high → low) |
 
-Each pick includes a short **Why** line. Date nav matches the other boards.
+Only the active filter’s metric(s) appear in the row (Floor · Proj · Ceiling when
+Proj FD is selected). Persistent: name, **AWAY @ HOME · time**, Weather boost %.
+PROG/STABLE/REG chip only on the **Prog** filter. No weather icons.
+
+**Coloring**
+- Pitchers: own club white; opponent tinted by **team K%** (red low / grey mid / green high).
+- Batters: own club white; opponent tinted by **opposing pitcher K% inverted** (green = favorable).
+
 Empty slate → Retry, not mock names.
 
 ## Option 5 — FD DFS Projections
@@ -93,7 +97,6 @@ The bundled EXAMPLE file uses the same schema.
 - Ceiling is a local uplift, not a Statcast-derived ceiling.
 - FanDuel fixture-lists require login (401 without cookies).
 - Timezone for “today”: **America/Los_Angeles**.
-- Top Picks FD value uses EXAMPLE salaries (same as Option 5) unless a CSV was imported there.
 - Proj TB is not Statcast xTB — season rates plus the existing park/pitcher/weather stack.
 - There is no standalone Total Bases home tile. Proj TB on Daily Batters and Top Picks share the same expected-TB formula.
 - DFS Lineups, Underdog Props, and FD DFS Projections live under **Beta**, not on the main home list.

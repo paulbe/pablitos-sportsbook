@@ -6,7 +6,6 @@ import com.pablitosb.sportsbook.data.tb.TbBatter
 import com.pablitosb.sportsbook.data.tb.TbCalculator
 import com.pablitosb.sportsbook.data.tb.TbSort
 import com.pablitosb.sportsbook.data.tb.TbSorter
-import com.pablitosb.sportsbook.data.toppicks.TopPicksSelector
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -39,15 +38,10 @@ class TbModelTest {
 
     @Test
     fun topTbRanksByProjTb() {
-        val picks = TopPicksSelector.tbSpots(
-            listOf(
-                tb("Role", 1.4f),
-                tb("Judge", 2.6f),
-                tb("Soto", 2.1f),
-            ),
-        )
-        assertEquals(listOf("Judge", "Soto", "Role"), picks.map { it.name })
-        assertTrue(picks.first().why.contains("2.60 Proj TB"))
+        val ranked = listOf(tb("Role", 1.4f), tb("Judge", 2.6f), tb("Soto", 2.1f))
+            .sortedByDescending { it.projTb }
+        assertEquals(listOf("Judge", "Soto", "Role"), ranked.map { it.name })
+        assertEquals(2.6f, ranked.first().projTb, 0.001f)
     }
 
     @Test

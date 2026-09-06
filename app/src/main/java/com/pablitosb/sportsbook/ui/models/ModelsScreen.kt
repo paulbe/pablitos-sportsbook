@@ -45,8 +45,8 @@ fun ModelsScreen(onBack: () -> Unit) {
         Triple("Prop Edge (beta)", "Model win% minus Underdog implied%", "Home → Beta → Underdog Props"),
         Triple(
             "Today’s Top Picks",
-            "SP Ks · HR · TB · FD value — four live formulas, one board",
-            "TB ≈ PA × (1·1B + 2·2B + 3·3B + 4·HR) / PA · not a separate home tile",
+            "Pitchers | Batters — top 10 by the same filters as Starters / Daily Batters",
+            "Single active metric · Weather boost · Option 1 / Option 2 coloring",
         ),
     )
     Column(

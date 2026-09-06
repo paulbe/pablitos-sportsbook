@@ -5,12 +5,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pablitosb.sportsbook.data.hr.HrSort
+import com.pablitosb.sportsbook.data.hr.HrSorter
 import com.pablitosb.sportsbook.data.projections.SlateLoadException
 import com.pablitosb.sportsbook.data.starters.StartersLoadException
 import com.pablitosb.sportsbook.data.starters.StartersRepository
+import com.pablitosb.sportsbook.data.starters.StartersSort
+import com.pablitosb.sportsbook.data.starters.StartersSorter
 import com.pablitosb.sportsbook.data.toppicks.TopPicksBoard
 import com.pablitosb.sportsbook.data.toppicks.TopPicksRepository
-import com.pablitosb.sportsbook.data.toppicks.TopPicksSection
+import com.pablitosb.sportsbook.data.toppicks.TopPicksSide
 import java.time.Instant
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
@@ -43,7 +47,15 @@ class TopPicksViewModel(
 
     var selectedDate by mutableStateOf(today)
         private set
-    var section by mutableStateOf(TopPicksSection.ALL)
+    var side by mutableStateOf(TopPicksSide.PITCHERS)
+        private set
+    var pitcherSort by mutableStateOf(StartersSort.PROJ_KS)
+        private set
+    var pitcherAscending by mutableStateOf(StartersSorter.defaultAscending(StartersSort.PROJ_KS))
+        private set
+    var batterSort by mutableStateOf(HrSort.GAME_HR)
+        private set
+    var batterAscending by mutableStateOf(HrSorter.defaultAscending(HrSort.GAME_HR))
         private set
     var ui by mutableStateOf<TopPicksUiState>(TopPicksUiState.Loading(today))
         private set
@@ -56,15 +68,33 @@ class TopPicksViewModel(
         refresh(initial = true)
     }
 
+    fun selectSide(next: TopPicksSide) {
+        side = next
+    }
+
+    fun selectPitcherSort(key: StartersSort) {
+        if (key == pitcherSort) {
+            pitcherAscending = !pitcherAscending
+        } else {
+            pitcherSort = key
+            pitcherAscending = StartersSorter.defaultAscending(key)
+        }
+    }
+
+    fun selectBatterSort(key: HrSort) {
+        if (key == batterSort) {
+            batterAscending = !batterAscending
+        } else {
+            batterSort = key
+            batterAscending = HrSorter.defaultAscending(key)
+        }
+    }
+
     fun shiftDays(days: Long) = goTo(selectedDate.plusDays(days))
     fun goToday() = goTo(today)
     fun goTo(date: LocalDate) {
         selectedDate = date.coerceIn(minDate, maxDate)
         refresh(initial = true)
-    }
-
-    fun selectSection(next: TopPicksSection) {
-        section = if (section == next && next != TopPicksSection.ALL) TopPicksSection.ALL else next
     }
 
     fun refresh(initial: Boolean = false) {

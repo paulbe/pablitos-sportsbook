@@ -106,7 +106,7 @@ fun HomeScreen(onOpen: (Dest) -> Unit) {
             HomeTile(
                 icon = Icons.Outlined.EmojiEvents,
                 title = "Today’s Top Picks",
-                subtitle = "SP Ks · HR · TB · FD value",
+                subtitle = "Pitchers · Batters · live ranked slate",
                 onClick = { onOpen(Dest.TopPicks) },
             )
             Spacer(Modifier.height(12.dp))

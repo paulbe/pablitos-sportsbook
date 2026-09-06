@@ -45,9 +45,9 @@ fun SettingsScreen(onBack: () -> Unit) {
         "FD DFS Projections" to "Live MLB → FanDuel pts · EXAMPLE salaries unless imported",
         "Home" to "Starters · Daily Batters · Top Picks · Beta",
         "Beta menu" to "DFS Lineups · Underdog Props · FD DFS Projections",
-        "Today’s Top Picks" to "SP Ks · HR · TB · FD value",
+        "Today’s Top Picks" to "Pitchers | Batters · same filters as Starters / Daily Batters",
         "TB formula" to "PA × (1·1B + 2·2B + 3·3B + 4·HR) · park/pitcher/weather",
-        "Version" to "1.19.0 (v0.1.19-debug)",
+        "Version" to "1.20.0 (v0.1.20-debug)",
     )
     Column(
         modifier = Modifier
