@@ -9,7 +9,7 @@ Android app for **today’s MLB slate** — live projected starters, **Daily Bat
 
 **Stable**
 1. **Projected Starters** — live MLB probables, filters (Prog · Proj Ks · xwOBA · Proj Outs · Proj FD), Weather boost, AWAY @ HOME
-2. **Daily Batters** — live lineups, Game HR% · Proj FD · Proj TB · H+R+RBI, Weather boost, AWAY @ HOME
+2. **Daily Batters** — live lineups, Game HR% · Proj FD · Proj TB · H+R+RBI, Games filter, Weather boost, AWAY @ HOME
 3. **Today’s Top Picks** — Pitchers | Batters digest (same filters as Starters / Daily Batters)
 4. **Beta** — submenu for work-in-progress boards
 
@@ -149,8 +149,10 @@ ceiling is deeper with more Ks and a higher W/QS chance. Sort is by Proj, then c
 
 Same visual language as Projected Starters (no headshots, no Pablito chrome, no
 PROG chip, no weather icons). Filters (tap again to reverse):
-**Game HR% · Proj FD · Proj TB · H+R+RBI**. Persistent on every row: name,
-**AWAY @ HOME · time**, **Weather boost** % (hitter-perspective: + green / − red).
+**Game HR% · Proj FD · Proj TB · H+R+RBI**. A **Games** chip under the tabs
+filters the board to selected matchups (default all; date change resets).
+Persistent on every row: name, **AWAY @ HOME · time**, **Weather boost** %
+(hitter-perspective: + green / − red).
 
 Only the active filter’s metric(s) appear in the middle of the row.
 

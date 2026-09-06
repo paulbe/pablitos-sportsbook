@@ -89,6 +89,7 @@ data class HrBatter(
     val projRbi: Float = 0f,
     val projHrr: Float = 0f,
     val oppPitcherK: Float? = null,
+    val gamePk: Int = 0,
 )
 
 data class DfsPlayer(

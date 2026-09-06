@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,22 +23,28 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +60,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pablitosb.sportsbook.data.hr.BatterOppTint
+import com.pablitosb.sportsbook.data.hr.GameChoice
+import com.pablitosb.sportsbook.data.hr.GameFilter
 import com.pablitosb.sportsbook.data.hr.HrSort
 import com.pablitosb.sportsbook.data.hr.HrSorter
 import com.pablitosb.sportsbook.data.mlb.OppKScale
@@ -60,6 +69,8 @@ import com.pablitosb.sportsbook.data.mlb.OppKTier
 import com.pablitosb.sportsbook.data.model.HrBatter
 import com.pablitosb.sportsbook.data.starters.StartersRepository
 import com.pablitosb.sportsbook.theme.AccentGreen
+import com.pablitosb.sportsbook.theme.CardFill
+import com.pablitosb.sportsbook.theme.CardStroke
 import com.pablitosb.sportsbook.theme.NavyBlack
 import com.pablitosb.sportsbook.theme.OpponentRed
 import com.pablitosb.sportsbook.theme.RegRed
@@ -245,8 +256,25 @@ private fun DateNavBar(
 @Composable
 private fun ReadyList(state: HrUiState.Ready, viewModel: HrViewModel) {
     val board = state.board
-    val sorted = remember(board.batters, viewModel.sortKey, viewModel.sortAscending) {
-        HrSorter.sort(board.batters, viewModel.sortKey, viewModel.sortAscending)
+    val games = remember(board.slate.games) { GameFilter.choices(board.slate.games) }
+    val allPks = remember(games) { games.map { it.gamePk }.toSet() }
+    val filtered = remember(board.batters, viewModel.selectedGamePks) {
+        GameFilter.keep(board.batters, viewModel.selectedGamePks)
+    }
+    val sorted = remember(filtered, viewModel.sortKey, viewModel.sortAscending) {
+        HrSorter.sort(filtered, viewModel.sortKey, viewModel.sortAscending)
+    }
+    var showGameSheet by remember { mutableStateOf(false) }
+    if (showGameSheet) {
+        FilterByGameSheet(
+            games = games,
+            initiallySelected = viewModel.selectedGamePks,
+            onApply = { pks ->
+                viewModel.applyGameFilter(pks, allPks)
+                showGameSheet = false
+            },
+            onDismiss = { showGameSheet = false },
+        )
     }
     LazyColumn(
         modifier = Modifier
@@ -255,6 +283,11 @@ private fun ReadyList(state: HrUiState.Ready, viewModel: HrViewModel) {
     ) {
         item {
             FilterTabRow(selected = viewModel.sortKey, onSelect = { viewModel.selectSort(it) })
+            Spacer(Modifier.height(8.dp))
+            GamesChipRow(
+                label = GameFilter.chipLabel(viewModel.selectedGamePks.size, games.size),
+                onClick = { if (games.isNotEmpty()) showGameSheet = true },
+            )
             Spacer(Modifier.height(8.dp))
             Text(
                 board.oppKScale.batterLegend(),
@@ -265,9 +298,20 @@ private fun ReadyList(state: HrUiState.Ready, viewModel: HrViewModel) {
             Text(updatedLabel(board.slate.fetchedAt), color = TextMuted, fontSize = 10.sp)
             Spacer(Modifier.height(6.dp))
         }
-        itemsIndexed(sorted, key = { _, it -> "${it.mlbId}-${it.gamePkKey()}" }) { index, batter ->
-            BatterRow(batter, viewModel.sortKey, index + 1, board.oppKScale)
-            SectionRule()
+        if (sorted.isEmpty()) {
+            item {
+                Text(
+                    "No hitters in the selected games.",
+                    color = TextMuted,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(vertical = 24.dp),
+                )
+            }
+        } else {
+            itemsIndexed(sorted, key = { _, it -> "${it.mlbId}-${it.gamePkKey()}" }) { index, batter ->
+                BatterRow(batter, viewModel.sortKey, index + 1, board.oppKScale)
+                SectionRule()
+            }
         }
         item {
             Spacer(Modifier.height(14.dp))
@@ -291,7 +335,7 @@ private fun ReadyList(state: HrUiState.Ready, viewModel: HrViewModel) {
     }
 }
 
-private fun HrBatter.gamePkKey(): String = "$homeAway-$gameTimeLabel-$battingOrder"
+private fun HrBatter.gamePkKey(): String = "$gamePk-$homeAway-$gameTimeLabel-$battingOrder"
 
 @Composable
 private fun FilterTabRow(selected: HrSort, onSelect: (HrSort) -> Unit) {
@@ -328,6 +372,136 @@ private fun FilterTabRow(selected: HrSort, onSelect: (HrSort) -> Unit) {
                         .width(56.dp)
                         .height(3.dp)
                         .background(if (on) AccentGreen else Color.Transparent, RoundedCornerShape(2.dp)),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GamesChipRow(label: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("Games", color = TextMuted, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Spacer(Modifier.width(8.dp))
+        Row(
+            modifier = Modifier
+                .background(CardFill, RoundedCornerShape(20.dp))
+                .border(1.dp, CardStroke, RoundedCornerShape(20.dp))
+                .clickable(onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(label, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.width(4.dp))
+            Icon(
+                Icons.Outlined.KeyboardArrowDown,
+                contentDescription = "Filter by game",
+                tint = AccentGreen,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FilterByGameSheet(
+    games: List<GameChoice>,
+    initiallySelected: Set<Int>,
+    onApply: (Set<Int>) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var draft by remember { mutableStateOf(initiallySelected) }
+    val canApply = GameFilter.canApply(draft)
+    val allPks = remember(games) { games.map { it.gamePk }.toSet() }
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = CardFill,
+        contentColor = TextPrimary,
+        scrimColor = Color.Black.copy(alpha = 0.62f),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 16.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Filter by game",
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { draft = allPks }) {
+                    Text("Select all", color = AccentGreen, fontWeight = FontWeight.SemiBold)
+                }
+                TextButton(onClick = { draft = emptySet() }) {
+                    Text("Clear", color = AccentGreen, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                games.forEachIndexed { index, game ->
+                    val on = game.gamePk in draft
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                draft = if (on) draft - game.gamePk else draft + game.gamePk
+                            }
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(
+                            checked = on,
+                            onCheckedChange = { checked ->
+                                draft = if (checked) draft + game.gamePk else draft - game.gamePk
+                            },
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = AccentGreen,
+                                uncheckedColor = TextMuted,
+                                checkmarkColor = Color(0xFF052E16),
+                            ),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(game.label, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    }
+                    if (index != games.lastIndex) SectionRule()
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .background(
+                        if (canApply) AccentGreen else AccentGreen.copy(alpha = 0.28f),
+                        RoundedCornerShape(12.dp),
+                    )
+                    .clickable(enabled = canApply) { onApply(draft) },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    "Apply",
+                    color = if (canApply) Color(0xFF052E16) else TextMuted,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
                 )
             }
         }

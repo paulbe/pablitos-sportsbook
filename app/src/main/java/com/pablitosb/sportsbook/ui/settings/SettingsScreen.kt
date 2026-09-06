@@ -35,7 +35,7 @@ fun SettingsScreen(onBack: () -> Unit) {
         "Savant xwOBA" to "Public expected-stats CSV · missing row shows —",
         "Matchups" to "AWAY @ HOME on every board (never vs)",
         "Park weather" to "Starters: Open-Meteo + park factor. Batters: MLB hydrate + park factor",
-        "Daily Batters" to "Game HR% · Proj FD · Proj TB · H+R+RBI · Weather boost (hitter +/−)",
+        "Daily Batters" to "Game HR% · Proj FD · Proj TB · H+R+RBI · Games filter · Weather boost",
         "Projected Starters" to "Prog · Proj Ks · xwOBA · Proj Outs · Proj FD · Weather boost",
         "Opp K colors" to "Starters: red=low K. Batters invert: green=low-K / favorable",
         "Proj Outs" to "Matchup-adjusted IP × 3 (recent/season shrink + OPS + wx + exits)",
@@ -47,7 +47,7 @@ fun SettingsScreen(onBack: () -> Unit) {
         "Beta menu" to "DFS Lineups · Underdog Props · FD DFS Projections",
         "Today’s Top Picks" to "Pitchers | Batters · same filters as Starters / Daily Batters",
         "TB formula" to "PA × (1·1B + 2·2B + 3·3B + 4·HR) · park/pitcher/weather",
-        "Version" to "1.20.0 (v0.1.20-debug)",
+        "Version" to "1.21.0 (v0.1.21-debug)",
     )
     Column(
         modifier = Modifier

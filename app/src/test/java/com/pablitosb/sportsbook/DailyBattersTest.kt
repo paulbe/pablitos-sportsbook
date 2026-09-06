@@ -2,12 +2,14 @@ package com.pablitosb.sportsbook
 
 import com.pablitosb.sportsbook.data.hr.BatterFdCalculator
 import com.pablitosb.sportsbook.data.hr.BatterOppTint
+import com.pablitosb.sportsbook.data.hr.GameFilter
 import com.pablitosb.sportsbook.data.hr.HrSort
 import com.pablitosb.sportsbook.data.hr.HrSorter
 import com.pablitosb.sportsbook.data.mlb.OppKScale
 import com.pablitosb.sportsbook.data.mlb.OppKTier
 import com.pablitosb.sportsbook.data.model.HrBatter
 import com.pablitosb.sportsbook.data.model.Weather
+import com.pablitosb.sportsbook.data.projections.SlateGame
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -112,6 +114,65 @@ class DailyBattersTest {
         assertFalse(legend.contains("team SO/PA"))
     }
 
+    @Test
+    fun gameChipLabel() {
+        assertEquals("All games", GameFilter.chipLabel(15, 15))
+        assertEquals("3 games", GameFilter.chipLabel(3, 15))
+        assertEquals("1 game", GameFilter.chipLabel(1, 15))
+        assertEquals("No games", GameFilter.chipLabel(0, 0))
+    }
+
+    @Test
+    fun gameChoicesAreAwayAtHomeWithTime() {
+        val choices = GameFilter.choices(
+            listOf(
+                game(2, "LAD", "ARI", "4:10 PM"),
+                game(1, "NYY", "BOS", "7:10 PM"),
+            ),
+        )
+        assertEquals(listOf(2, 1), choices.map { it.gamePk })
+        assertEquals("NYY @ BOS  ·  7:10 PM", choices[1].label)
+        assertTrue(choices.none { it.label.contains("vs", ignoreCase = true) })
+    }
+
+    @Test
+    fun gameFilterKeepsSelectedGamesAndReranks() {
+        val list = listOf(
+            batter("Soto", hr = 12f, fd = 22f, ceil = 30f, tb = 1.8f, hrr = 2.4f, gamePk = 1),
+            batter("Judge", hr = 18f, fd = 28f, ceil = 36f, tb = 2.4f, hrr = 3.2f, gamePk = 2),
+            batter("Alvarez", hr = 15f, fd = 24f, ceil = 32f, tb = 2.0f, hrr = 2.8f, gamePk = 1),
+        )
+        val kept = GameFilter.keep(list, setOf(1))
+        assertEquals(listOf("Soto", "Alvarez"), kept.map { it.name })
+        val ranked = HrSorter.sort(kept, HrSort.GAME_HR, ascending = false)
+        assertEquals(listOf("Alvarez", "Soto"), ranked.map { it.name })
+        assertFalse(GameFilter.canApply(emptySet()))
+        assertTrue(GameFilter.canApply(setOf(1)))
+    }
+
+    private fun game(pk: Int, away: String, home: String, time: String) = SlateGame(
+        gamePk = pk,
+        venueId = null,
+        venueName = "Park",
+        weather = Weather.SUN,
+        tempF = 72,
+        wind = "",
+        weatherFactor = 1f,
+        parkHrFactor = 1f,
+        homeAbbr = home,
+        awayAbbr = away,
+        homeId = 1,
+        awayId = 2,
+        homePitcherId = null,
+        awayPitcherId = null,
+        homePitcherName = "",
+        awayPitcherName = "",
+        postponed = false,
+        gameTimeLabel = time,
+        homeLineupPosted = true,
+        awayLineupPosted = true,
+    )
+
     private fun batter(
         name: String,
         hr: Float,
@@ -119,6 +180,7 @@ class DailyBattersTest {
         ceil: Float,
         tb: Float,
         hrr: Float,
+        gamePk: Int = 0,
     ) = HrBatter(
         rank = 1,
         name = name,
@@ -139,5 +201,6 @@ class DailyBattersTest {
         fdCeiling = ceil,
         projTb = tb,
         projHrr = hrr,
+        gamePk = gamePk,
     )
 }

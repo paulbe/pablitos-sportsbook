@@ -37,7 +37,7 @@ fun ModelsScreen(onBack: () -> Unit) {
         ),
         Triple(
             "Daily Batters",
-            "Game HR% · Proj FD · Proj TB · H+R+RBI — Weather boost, inverted opp K%",
+            "Game HR% · Proj FD · Proj TB · H+R+RBI — Games filter, Weather boost, inverted opp K%",
             "HR% = talent × park × weather × pitcher × platoon · FD = FanDuel hitter table",
         ),
         Triple("DFS Optimizer (beta)", "FanDuel salary, stacks, and ownership levers", "Home → Beta → DFS Lineups"),

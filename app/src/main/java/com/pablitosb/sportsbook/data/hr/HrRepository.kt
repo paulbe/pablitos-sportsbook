@@ -86,6 +86,7 @@ class HrRepository(
                 projRbi = fd.counting.rbi,
                 projHrr = fd.counting.hrr,
                 oppPitcherK = oppK,
+                gamePk = h.gamePk,
             )
         }
         val batters = HrSorter.sort(mapped, HrSort.GAME_HR, ascending = false)

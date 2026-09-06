@@ -51,7 +51,12 @@ class HrViewModel(
         private set
     var sortAscending by mutableStateOf(HrSorter.defaultAscending(HrSort.GAME_HR))
         private set
+    var selectedGamePks by mutableStateOf<Set<Int>>(emptySet())
+        private set
+    var allGamesSelected by mutableStateOf(true)
+        private set
 
+    private var gameFilterDate: LocalDate? = null
     private var loadJob: Job? = null
 
     init {
@@ -70,8 +75,36 @@ class HrViewModel(
     fun shiftDays(days: Long) = goTo(selectedDate.plusDays(days))
     fun goToday() = goTo(today)
     fun goTo(date: LocalDate) {
-        selectedDate = date.coerceIn(minDate, maxDate)
+        val next = date.coerceIn(minDate, maxDate)
+        if (next != selectedDate) {
+            allGamesSelected = true
+            gameFilterDate = null
+            selectedGamePks = emptySet()
+        }
+        selectedDate = next
         refresh(initial = true)
+    }
+
+    fun applyGameFilter(pks: Set<Int>, allPks: Set<Int>) {
+        if (pks.isEmpty()) return
+        selectedGamePks = pks
+        allGamesSelected = pks.size == allPks.size && pks.containsAll(allPks)
+    }
+
+    private fun syncGames(board: HrBoard) {
+        val pks = board.slate.games.map { it.gamePk }.toSet()
+        val date = board.slate.slateDate
+        if (gameFilterDate != date || allGamesSelected) {
+            selectedGamePks = pks
+            allGamesSelected = true
+            gameFilterDate = date
+        } else {
+            selectedGamePks = selectedGamePks.intersect(pks)
+            if (selectedGamePks.isEmpty()) {
+                selectedGamePks = pks
+                allGamesSelected = true
+            }
+        }
     }
 
     fun refresh(initial: Boolean = false) {
@@ -91,6 +124,7 @@ class HrViewModel(
                         sourceLabel = board.slate.sourceLabel,
                     )
                 } else {
+                    syncGames(board)
                     HrUiState.Ready(board)
                 }
             } catch (_: CancellationException) {
