@@ -6,16 +6,20 @@ props board, and **Today’s Top Picks** (SP Ks · HR · TB · FD value). Dark n
 
 ## Home
 
+**Stable**
 1. **Projected Starters** — live MLB probables, outlook, weather/park, xwOBA, sort
 2. **Daily HR Probability** — live lineups, game HR%
-3. **DFS Lineups** — FanDuel classic $35k optimizer
-4. **FD DFS Projections** — ranked FanDuel-pts board for a chosen slate
-5. **Underdog Props** — model board + import
-6. **Today’s Top Picks** — SP Ks · HR · TB · FD value
+3. **Today’s Top Picks** — SP Ks · HR · TB · FD value
+4. **Beta** — submenu for work-in-progress boards
 
-Footer: **Models** · **Settings**. There is no Option 7 home tile.
+**Beta menu**
+- **DFS Lineups** — FanDuel classic $35k optimizer
+- **Underdog Props** — model board + import
+- **FD DFS Projections** — ranked FanDuel-pts board
 
-## Option 6 — Today’s Top Picks
+Footer: **Models** · **Settings**. DFS / Props / FD projections are no longer primary home tiles.
+
+## Today’s Top Picks
 
 A daily digest of four live formulas. Default date is **America/Los_Angeles** today.
 

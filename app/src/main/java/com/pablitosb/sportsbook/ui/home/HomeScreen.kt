@@ -22,10 +22,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.GpsFixed
-import androidx.compose.material.icons.outlined.Leaderboard
+import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.SportsBaseball
 import androidx.compose.material.icons.outlined.Sports
@@ -50,6 +48,7 @@ import com.pablitosb.sportsbook.theme.CardFill
 import com.pablitosb.sportsbook.theme.CardStroke
 import com.pablitosb.sportsbook.theme.NavyBlack
 import com.pablitosb.sportsbook.theme.NavySurface
+import com.pablitosb.sportsbook.theme.HrWeatherOrange
 import com.pablitosb.sportsbook.theme.TextPrimary
 import com.pablitosb.sportsbook.ui.components.BrandMark
 import com.pablitosb.sportsbook.ui.components.DateChip
@@ -105,31 +104,18 @@ fun HomeScreen(onOpen: (Dest) -> Unit) {
             )
             Spacer(Modifier.height(12.dp))
             HomeTile(
-                icon = Icons.Outlined.Shield,
-                title = "DFS Lineups",
-                subtitle = "Optimizer · EXAMPLE or imported slate",
-                onClick = { onOpen(Dest.Dfs) },
-            )
-            Spacer(Modifier.height(12.dp))
-            HomeTile(
-                icon = Icons.Outlined.Leaderboard,
-                title = "FD DFS Projections",
-                subtitle = "Live FanDuel pts board · choose slate",
-                onClick = { onOpen(Dest.FdProj) },
-            )
-            Spacer(Modifier.height(12.dp))
-            HomeTile(
-                icon = Icons.Outlined.GpsFixed,
-                title = "Underdog Props",
-                subtitle = "Model board · import lines for edge",
-                onClick = { onOpen(Dest.Props) },
-            )
-            Spacer(Modifier.height(12.dp))
-            HomeTile(
                 icon = Icons.Outlined.EmojiEvents,
                 title = "Today’s Top Picks",
                 subtitle = "SP Ks · HR · TB · FD value",
                 onClick = { onOpen(Dest.TopPicks) },
+            )
+            Spacer(Modifier.height(12.dp))
+            HomeTile(
+                icon = Icons.Outlined.Science,
+                title = "Beta",
+                subtitle = "DFS Lineups · Props · FD projections",
+                badge = "BETA",
+                onClick = { onOpen(Dest.Beta) },
             )
         }
         HomeFooter(
@@ -170,11 +156,12 @@ private fun BaseballRule() {
 }
 
 @Composable
-private fun HomeTile(
+internal fun HomeTile(
     icon: ImageVector,
     title: String,
     subtitle: String,
     onClick: () -> Unit,
+    badge: String? = null,
 ) {
     val shape = RoundedCornerShape(16.dp)
     Row(
@@ -211,7 +198,13 @@ private fun HomeTile(
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(title, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+                if (badge != null) {
+                    Spacer(Modifier.width(8.dp))
+                    BetaBadge(badge)
+                }
+            }
             Spacer(Modifier.height(2.dp))
             Text(subtitle, color = AccentGreen, fontSize = 13.sp)
         }
@@ -221,6 +214,21 @@ private fun HomeTile(
             tint = AccentGreen,
         )
     }
+}
+
+@Composable
+internal fun BetaBadge(label: String = "BETA") {
+    Text(
+        text = label,
+        modifier = Modifier
+            .background(HrWeatherOrange.copy(alpha = 0.16f), RoundedCornerShape(6.dp))
+            .border(1.dp, HrWeatherOrange.copy(alpha = 0.7f), RoundedCornerShape(6.dp))
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        color = HrWeatherOrange,
+        fontSize = 9.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 0.6.sp,
+    )
 }
 
 @Composable

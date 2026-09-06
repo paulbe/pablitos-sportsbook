@@ -37,9 +37,11 @@ fun SettingsScreen(onBack: () -> Unit) {
         "FanDuel salaries" to "EXAMPLE formula / import / Sample CSV — not live FD",
         "Underdog lines" to "Model board / import — not live UD",
         "FD DFS Projections" to "Live MLB → FanDuel pts · EXAMPLE salaries unless imported",
-        "Today’s Top Picks" to "SP Ks · HR · TB · FD value (TB is an Option 6 formula, not a home tile)",
+        "Home" to "Starters · HR Prob · Top Picks · Beta",
+        "Beta menu" to "DFS Lineups · Underdog Props · FD DFS Projections",
+        "Today’s Top Picks" to "SP Ks · HR · TB · FD value",
         "TB formula" to "PA × (1·1B + 2·2B + 3·3B + 4·HR) · park/pitcher/weather",
-        "Version" to "1.13.0 (v0.1.13-debug)",
+        "Version" to "1.14.0 (v0.1.14-debug)",
     )
     Column(
         modifier = Modifier

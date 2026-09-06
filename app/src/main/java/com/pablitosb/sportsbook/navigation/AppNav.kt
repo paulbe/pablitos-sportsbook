@@ -7,6 +7,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.pablitosb.sportsbook.ui.dfs.DfsLineupsScreen
 import com.pablitosb.sportsbook.ui.fdproj.FdProjScreen
+import com.pablitosb.sportsbook.ui.home.BetaScreen
 import com.pablitosb.sportsbook.ui.home.HomeScreen
 import com.pablitosb.sportsbook.ui.hr.HrProbabilityScreen
 import com.pablitosb.sportsbook.ui.models.ModelsScreen
@@ -23,6 +24,7 @@ enum class Dest(val route: String) {
     FdProj("fdproj"),
     Props("props"),
     TopPicks("toppicks"),
+    Beta("beta"),
     Models("models"),
     Settings("settings"),
 }
@@ -39,6 +41,7 @@ fun AppNav(modifier: Modifier = Modifier) {
         modifier = modifier,
     ) {
         composable(Dest.Home.route) { HomeScreen(onOpen = open) }
+        composable(Dest.Beta.route) { BetaScreen(onBack = back, onOpen = open) }
         composable(Dest.Starters.route) { StartersScreen(onBack = back) }
         composable(Dest.HrProb.route) { HrProbabilityScreen(onBack = back) }
         composable(Dest.Dfs.route) { DfsLineupsScreen(onBack = back) }
