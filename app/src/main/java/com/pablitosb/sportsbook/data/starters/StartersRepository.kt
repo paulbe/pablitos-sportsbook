@@ -130,6 +130,23 @@ class StartersRepository(
             } else {
                 row.team to row.opponent
             }
+            val seasonEra = if (sample != null && sample.seasonIp > 0f) {
+                sample.seasonEr * 9f / sample.seasonIp
+            } else {
+                null
+            }
+            val fd = ProjFdCalculator.project(
+                predKs,
+                outs.projIp,
+                ProjFdCalculator.Context(
+                    seasonEra = seasonEra,
+                    seasonIp = sample?.seasonIp ?: 0f,
+                    opponent = opp,
+                    envBoostPct = row.wx.envBoostPct,
+                    rain = row.wx.tag == WxTag.RAIN_RISK,
+                    homeStart = row.homeAway == "home",
+                ),
+            )
             Starter(
                 rank = index + 1,
                 name = row.name,
@@ -169,6 +186,9 @@ class StartersRepository(
                 oppKRate = opp?.kRate,
                 awayAbbr = awayAbbr,
                 homeAbbr = homeAbbr,
+                fdFloor = fd.floor,
+                fdProj = fd.proj,
+                fdCeiling = fd.ceiling,
             )
         }
         StartersBoard(
@@ -445,6 +465,7 @@ class StartersRepository(
             recentGs = recent.size,
             lastStartIp = recentIpList.lastOrNull()?.takeIf { it > 0f },
             last5Ip = recentIpList,
+            seasonEr = starts.sumOf { it.optObj("stat")?.optIntOrNull("earnedRuns") ?: 0 },
         )
     }
 

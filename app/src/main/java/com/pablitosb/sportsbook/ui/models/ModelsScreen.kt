@@ -32,8 +32,8 @@ fun ModelsScreen(onBack: () -> Unit) {
     val cards = listOf(
         Triple(
             "SP Progression",
-            "Prog · Proj Ks · xwOBA · Proj Outs — single-stat rows, Weather boost, opp K% colors",
-            "Proj Outs = matchup-adjusted IP × 3",
+            "Prog · Proj Ks · xwOBA · Proj Outs · Proj FD — Weather boost, opp K% colors",
+            "Proj FD = 3×Ks + Outs + 6×P(W) + 4×P(QS) − 3×E[ER]",
         ),
         Triple("Game HR", "Talent × park × weather × pitcher × platoon", "Daily home-run probability board"),
         Triple("DFS Optimizer (beta)", "FanDuel salary, stacks, and ownership levers", "Home → Beta → DFS Lineups"),

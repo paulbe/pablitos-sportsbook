@@ -16,8 +16,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -315,10 +317,11 @@ private fun ReadyList(state: StartersUiState.Ready, viewModel: StartersViewModel
                     "Predictions are reconstructed with OutlookCalculator using only game logs before this date. " +
                         "Actual Ks come from the boxscore starter. Δ = actual − predicted."
                 } else {
-                    "Filters: Prog · Proj Ks · xwOBA · Proj Outs. Center shows only the selected stat. " +
+                    "Filters: Prog · Proj Ks · xwOBA · Proj Outs · Proj FD. " +
+                        "Other filters stay single-stat; Proj FD shows Floor · Proj · Ceiling. " +
                         "Outlook = quality (proj K% vs 22.5% lg) + last-5-GS vs season K% trajectory. " +
-                        "Proj Ks ≈ proj K% × expected BF. Proj Outs = matchup-adjusted IP × 3 " +
-                        "(shrink recent/season IP/GS, then opponent OPS, Weather boost, early exits). " +
+                        "Proj Ks ≈ proj K% × expected BF. Proj Outs = matchup-adjusted IP × 3. " +
+                        "Proj FD = 3×Ks + Outs + 6×P(W) + 4×P(QS) − 3×E[ER] (matchup ERA, home, rain). " +
                         "Weather boost % = HR park + park-relative wind + temp (+ = hitter-friendly). " +
                         "Pitcher’s team stays white; opponent tint is team K% tertiles. " +
                         "Tap an active filter to flip sort direction."
@@ -338,17 +341,18 @@ private fun FilterTabRow(
     onSelect: (StartersSort) -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.Bottom,
     ) {
         filterTabs().forEach { (key, label) ->
             val on = key == selected
             Column(
                 modifier = Modifier
-                    .weight(1f)
                     .clickable { onSelect(key) }
-                    .padding(top = 6.dp),
+                    .padding(top = 6.dp, start = 8.dp, end = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
@@ -361,7 +365,7 @@ private fun FilterTabRow(
                 Spacer(Modifier.height(6.dp))
                 Box(
                     Modifier
-                        .fillMaxWidth()
+                        .width(48.dp)
                         .height(3.dp)
                         .background(if (on) AccentGreen else Color.Transparent, RoundedCornerShape(2.dp)),
                 )
@@ -375,6 +379,7 @@ private fun filterTabs(): List<Pair<StartersSort, String>> = listOf(
     StartersSort.PROJ_KS to "Proj Ks",
     StartersSort.XWOBA to "xwOBA",
     StartersSort.PROJ_OUTS to "Proj Outs",
+    StartersSort.PROJ_FD to "Proj FD",
 )
 
 @Composable
@@ -528,7 +533,12 @@ private fun StarterRow(
                 Text(starter.resultNote, color = TextMuted, fontSize = 10.sp, maxLines = 1)
             }
         }
-        SelectedStat(starter, sortKey, results, Modifier.weight(0.85f))
+        SelectedStat(
+            starter,
+            sortKey,
+            results,
+            Modifier.weight(if (sortKey == StartersSort.PROJ_FD) 1.35f else 0.85f),
+        )
         Column(
             horizontalAlignment = Alignment.End,
             modifier = Modifier.padding(start = 4.dp),
@@ -578,6 +588,11 @@ private fun SelectedStat(
             String.format(Locale.US, "%.1f", starter.projOuts),
             if (starter.projIp > 0f) String.format(Locale.US, "~%.1f IP", starter.projIp) else null,
         )
+        StartersSort.PROJ_FD -> Triple("Proj FD", "", null)
+    }
+    if (sortKey == StartersSort.PROJ_FD) {
+        FdTriple(starter, modifier)
+        return
     }
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.Center) {
@@ -593,6 +608,27 @@ private fun SelectedStat(
         if (sub != null) {
             Text(sub, color = TextMuted, fontSize = 9.sp, maxLines = 1)
         }
+    }
+}
+
+@Composable
+private fun FdTriple(starter: Starter, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        FdCell("Floor", String.format(Locale.US, "%.1f", starter.fdFloor), TextPrimary, 13.sp)
+        FdCell("Proj", String.format(Locale.US, "%.1f", starter.fdProj), AccentGreen, 18.sp)
+        FdCell("Ceiling", String.format(Locale.US, "%.1f", starter.fdCeiling), TextPrimary, 13.sp)
+    }
+}
+
+@Composable
+private fun FdCell(label: String, value: String, color: Color, valueSize: androidx.compose.ui.unit.TextUnit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, color = TextMuted, fontSize = 8.sp, fontWeight = FontWeight.Medium)
+        Text(value, color = color, fontSize = valueSize, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }
 

@@ -423,6 +423,17 @@ class StartersUpgradeTest {
         assertEquals("Soft", StartersSorter.sort(list, StartersSort.PROJ_OUTS, true).first().name)
     }
 
+    @Test
+    fun sortProjFdByProjThenCeiling() {
+        val list = listOf(
+            sp("Mid", fdProj = 36f, fdCeil = 58f),
+            sp("Ace", fdProj = 42f, fdCeil = 60f),
+            sp("SameProjHighCeil", fdProj = 36f, fdCeil = 62f),
+        )
+        val sorted = StartersSorter.sort(list, StartersSort.PROJ_FD, ascending = false)
+        assertEquals(listOf("Ace", "SameProjHighCeil", "Mid"), sorted.map { it.name })
+    }
+
     private fun sp(
         name: String,
         score: Int = 0,
@@ -432,6 +443,8 @@ class StartersUpgradeTest {
         rain: Boolean = false,
         start: Instant? = null,
         outs: Float = 15f,
+        fdProj: Float = 30f,
+        fdCeil: Float = 45f,
     ) = Starter(
         rank = 1,
         name = name,
@@ -451,5 +464,8 @@ class StartersUpgradeTest {
         gameStart = start,
         projOuts = outs,
         projIp = outs / 3f,
+        fdFloor = fdProj - 10f,
+        fdProj = fdProj,
+        fdCeiling = fdCeil,
     )
 }

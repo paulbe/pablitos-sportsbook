@@ -35,9 +35,10 @@ fun SettingsScreen(onBack: () -> Unit) {
         "Savant xwOBA" to "Public expected-stats CSV · missing row shows —",
         "Matchups" to "AWAY @ HOME on every board (never vs)",
         "Park weather" to "Open-Meteo + multi-year HR park factor (same as Daily HR)",
-        "Projected Starters" to "Prog · Proj Ks · xwOBA · Proj Outs · Weather boost",
+        "Projected Starters" to "Prog · Proj Ks · xwOBA · Proj Outs · Proj FD · Weather boost",
         "Opp K colors" to "Red < 21.6% · grey mid · green > 23.4% (MLB tertiles)",
         "Proj Outs" to "Matchup-adjusted IP × 3 (recent/season shrink + OPS + wx + exits)",
+        "Proj FD" to "3×Ks + Outs + 6×P(W) + 4×P(QS) − 3×E[ER] · Floor / Proj / Ceiling",
         "FanDuel salaries" to "EXAMPLE formula / import / Sample CSV — not live FD",
         "Underdog lines" to "Model board / import — not live UD",
         "FD DFS Projections" to "Live MLB → FanDuel pts · EXAMPLE salaries unless imported",
@@ -45,7 +46,7 @@ fun SettingsScreen(onBack: () -> Unit) {
         "Beta menu" to "DFS Lineups · Underdog Props · FD DFS Projections",
         "Today’s Top Picks" to "SP Ks · HR · TB · FD value",
         "TB formula" to "PA × (1·1B + 2·2B + 3·3B + 4·HR) · park/pitcher/weather",
-        "Version" to "1.16.0 (v0.1.16-debug)",
+        "Version" to "1.17.0 (v0.1.17-debug)",
     )
     Column(
         modifier = Modifier

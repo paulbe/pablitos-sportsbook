@@ -7,7 +7,7 @@ props board, and **Today’s Top Picks** (SP Ks · HR · TB · FD value). Dark n
 ## Home
 
 **Stable**
-1. **Projected Starters** — live MLB probables, single-stat filters (Prog · Proj Ks · xwOBA · Proj Outs), Weather boost, AWAY @ HOME
+1. **Projected Starters** — live MLB probables, filters (Prog · Proj Ks · xwOBA · Proj Outs · Proj FD), Weather boost, AWAY @ HOME
 2. **Daily HR Probability** — live lineups, game HR%
 3. **Today’s Top Picks** — SP Ks · HR · TB · FD value
 4. **Beta** — submenu for work-in-progress boards
@@ -98,11 +98,12 @@ The bundled EXAMPLE file uses the same schema.
 - DFS Lineups, Underdog Props, and FD DFS Projections live under **Beta**, not on the main home list.
 - Proj Outs is a local IP model (recent/season logs + opponent OPS + Weather boost + early exits), not Statcast or a pitch-count feed.
 - Opponent K colors use season team SO/PA. Sparse seasons fall back to 21.6% / 23.4%. Retractable roofs stay outdoor unless MLB says closed.
+- Proj FD W / QS / ER terms are local heuristics, not book odds or a pitch-level model.
 
 ## Option 1 — Projected Starters
 
-Single-stat rows. Filters (tap again to reverse): **Prog · Proj Ks · xwOBA · Proj Outs**.
-Time and Boost are not sort tabs. Persistent on every row: name, **AWAY @ HOME** + first pitch,
+Filters (tap again to reverse): **Prog · Proj Ks · xwOBA · Proj Outs · Proj FD**.
+Other filters stay single-stat. Persistent on every row: name, **AWAY @ HOME · time**,
 PROG/STABLE/REG badge, **Weather boost** %. Raw wind, temp, and rain details stay off the row.
 
 **Opponent color** tints only the opponent abbreviation (pitcher’s club stays white):
@@ -128,6 +129,16 @@ projOuts = projIp × 3
 ```
 
 Optional `~IP` subtitle under the outs figure.
+
+**Proj FD** (FanDuel pitcher scoring: SO 3 · IP 3/inning · W 6 · QS 4 · ER −3):
+
+```
+Proj FD = 3×ProjKs + ProjOuts + 6×P(W) + 4×P(QS) − 3×E[ER]
+```
+
+P(W), P(QS), and E[ER] are matchup heuristics (shrunk season ERA × opponent OPS ×
+Weather boost, home-start bump, rain haircut). Floor is a shorter/messier outing;
+ceiling is deeper with more Ks and a higher W/QS chance. Sort is by Proj, then ceiling.
 
 ## Option 1 weather
 

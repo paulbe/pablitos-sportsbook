@@ -7,6 +7,7 @@ enum class StartersSort {
     PROJ_KS,
     XWOBA,
     PROJ_OUTS,
+    PROJ_FD,
 }
 
 object StartersSorter {
@@ -15,6 +16,7 @@ object StartersSorter {
         StartersSort.PROJ_KS -> false
         StartersSort.XWOBA -> true
         StartersSort.PROJ_OUTS -> false
+        StartersSort.PROJ_FD -> false
     }
 
     fun sort(
@@ -31,9 +33,12 @@ object StartersSorter {
                 compareBy<Starter> { it.xwoba == null }.thenBy { it.xwoba ?: Float.MAX_VALUE },
             )
             StartersSort.PROJ_OUTS -> starters.sortedByDescending { it.projOuts }
+            StartersSort.PROJ_FD -> starters.sortedWith(
+                compareByDescending<Starter> { it.fdProj }.thenByDescending { it.fdCeiling },
+            )
         }
         val needsFlip = when (key) {
-            StartersSort.PROG, StartersSort.PROJ_KS, StartersSort.PROJ_OUTS -> ascending
+            StartersSort.PROG, StartersSort.PROJ_KS, StartersSort.PROJ_OUTS, StartersSort.PROJ_FD -> ascending
             StartersSort.XWOBA -> !ascending
         }
         return if (needsFlip) {

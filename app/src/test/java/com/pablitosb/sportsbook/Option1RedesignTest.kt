@@ -4,6 +4,7 @@ import com.pablitosb.sportsbook.data.mlb.Matchup
 import com.pablitosb.sportsbook.data.mlb.OppKScale
 import com.pablitosb.sportsbook.data.mlb.OppKTier
 import com.pablitosb.sportsbook.data.mlb.TeamOffense
+import com.pablitosb.sportsbook.data.starters.ProjFdCalculator
 import com.pablitosb.sportsbook.data.starters.ProjOutsCalculator
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -136,4 +137,52 @@ class Option1RedesignTest {
         assertTrue(r.projIp in 3.5f..7.2f)
         assertEquals(r.projIp * 3f, r.projOuts, 0.001f)
     }
+
+    @Test
+    fun projFdUsesFullFanDuelPitcherTable() {
+        val ctx = easyFdCtx()
+        val r = ProjFdCalculator.project(7.4f, 5.73f, ctx)
+        val expected = ProjFdCalculator.score(7.4f, 5.73f * 3f, r.pWin, r.pQs, r.expectedEr)
+        assertEquals(expected, r.proj, 0.01f)
+        assertTrue(r.floor < r.proj)
+        assertTrue(r.proj < r.ceiling)
+        assertTrue(r.pWin in 0.10f..0.50f)
+        assertTrue(r.pQs in 0.05f..0.72f)
+    }
+
+    @Test
+    fun projFdHotOffenseAndRainCutsPoints() {
+        val easy = ProjFdCalculator.project(7.4f, 6.0f, easyFdCtx())
+        val tough = ProjFdCalculator.project(
+            7.4f,
+            6.0f,
+            ProjFdCalculator.Context(
+                seasonEra = 3.40f,
+                seasonIp = 110f,
+                opponent = TeamOffense(0.190f, 0.820f, 4000),
+                envBoostPct = 18,
+                rain = true,
+                homeStart = false,
+            ),
+        )
+        assertTrue(easy.proj > tough.proj)
+        assertTrue(easy.pWin > tough.pWin)
+    }
+
+    @Test
+    fun projFdHomeStartHelpsWinChance() {
+        val road = ProjFdCalculator.project(6.5f, 5.8f, easyFdCtx().copy(homeStart = false))
+        val home = ProjFdCalculator.project(6.5f, 5.8f, easyFdCtx().copy(homeStart = true))
+        assertTrue(home.pWin > road.pWin)
+        assertTrue(home.proj > road.proj)
+    }
+
+    private fun easyFdCtx() = ProjFdCalculator.Context(
+        seasonEra = 3.10f,
+        seasonIp = 120f,
+        opponent = TeamOffense(0.250f, 0.650f, 4000),
+        envBoostPct = -8,
+        rain = false,
+        homeStart = true,
+    )
 }

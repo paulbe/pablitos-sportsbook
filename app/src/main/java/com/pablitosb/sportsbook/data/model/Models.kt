@@ -43,6 +43,9 @@ data class Starter(
     val oppKRate: Float? = null,
     val awayAbbr: String = "",
     val homeAbbr: String = "",
+    val fdFloor: Float = 0f,
+    val fdProj: Float = 0f,
+    val fdCeiling: Float = 0f,
 )
 
 enum class Weather { SUN, CLOUD, RAIN }
