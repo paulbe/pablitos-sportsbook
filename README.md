@@ -1,14 +1,15 @@
 # Pablito’s Sportsbook
 
-Android app for **today’s MLB slate** — live projected starters, daily HR probability,
-FanDuel classic DFS lineups, a **FanDuel DFS projections board**, an Underdog-style
-props board, and **Today’s Top Picks** (SP Ks · HR · TB · FD value). Dark navy + green.
+Android app for **today’s MLB slate** — live projected starters, **Daily Batters**
+(Game HR% · Proj FD · Proj TB · H+R+RBI), FanDuel classic DFS lineups, a
+**FanDuel DFS projections board**, an Underdog-style props board, and
+**Today’s Top Picks** (SP Ks · HR · TB · FD value). Dark navy + green.
 
 ## Home
 
 **Stable**
 1. **Projected Starters** — live MLB probables, filters (Prog · Proj Ks · xwOBA · Proj Outs · Proj FD), Weather boost, AWAY @ HOME
-2. **Daily HR Probability** — live lineups, game HR%
+2. **Daily Batters** — live lineups, Game HR% · Proj FD · Proj TB · H+R+RBI, Weather boost, AWAY @ HOME
 3. **Today’s Top Picks** — SP Ks · HR · TB · FD value
 4. **Beta** — submenu for work-in-progress boards
 
@@ -26,7 +27,7 @@ A daily digest of four live formulas. Default date is **America/Los_Angeles** to
 | Section | How it’s chosen |
 | --- | --- |
 | **Top SP K spots** | Live Projected Starters, rain last, then **Proj Ks**, then outlook |
-| **Top HR spots** | Daily HR Probability, ranked by **game HR%** |
+| **Top HR spots** | Daily Batters, ranked by **game HR%** |
 | **Top TB spots** | Expected total bases: `TB ≈ PA × (1·1B + 2·2B + 3·3B + 4·HR) / PA` |
 | **Top FD value** | FD DFS Projections: **pts/$1k** when salary exists, else Proj FD pts |
 
@@ -94,11 +95,12 @@ The bundled EXAMPLE file uses the same schema.
 - Timezone for “today”: **America/Los_Angeles**.
 - Top Picks FD value uses EXAMPLE salaries (same as Option 5) unless a CSV was imported there.
 - Proj TB is not Statcast xTB — season rates plus the existing park/pitcher/weather stack.
-- TB is a Today’s Top Picks formula only. There is no standalone Total Bases home tile.
+- There is no standalone Total Bases home tile. Proj TB on Daily Batters and Top Picks share the same expected-TB formula.
 - DFS Lineups, Underdog Props, and FD DFS Projections live under **Beta**, not on the main home list.
 - Proj Outs is a local IP model (recent/season logs + opponent OPS + Weather boost + early exits), not Statcast or a pitch-count feed.
-- Opponent K colors use season team SO/PA. Sparse seasons fall back to 21.6% / 23.4%. Retractable roofs stay outdoor unless MLB says closed.
-- Proj FD W / QS / ER terms are local heuristics, not book odds or a pitch-level model.
+- Starter opponent K colors use season team SO/PA. Daily Batters tints the opponent by **opposing pitcher K%**, inverted (green = low-K / favorable). Sparse samples fall back to 21.6% / 23.4%. Retractable roofs stay outdoor unless MLB says closed.
+- Proj FD W / QS / ER terms (starters) and Floor / Ceiling counting-stat stress (batters) are local heuristics, not FanDuel official projections.
+- Daily Batters **Weather boost** uses the MLB schedule weather hydrate plus the park HR factor. It does **not** fetch Open-Meteo on that path (starters do). + is hitter-friendly.
 
 ## Option 1 — Projected Starters
 
@@ -139,6 +141,45 @@ Proj FD = 3×ProjKs + ProjOuts + 6×P(W) + 4×P(QS) − 3×E[ER]
 P(W), P(QS), and E[ER] are matchup heuristics (shrunk season ERA × opponent OPS ×
 Weather boost, home-start bump, rain haircut). Floor is a shorter/messier outing;
 ceiling is deeper with more Ks and a higher W/QS chance. Sort is by Proj, then ceiling.
+
+## Option 2 — Daily Batters
+
+Same visual language as Projected Starters (no headshots, no Pablito chrome, no
+PROG chip, no weather icons). Filters (tap again to reverse):
+**Game HR% · Proj FD · Proj TB · H+R+RBI**. Persistent on every row: name,
+**AWAY @ HOME · time**, **Weather boost** % (hitter-perspective: + green / − red).
+
+Only the active filter’s metric(s) appear in the middle of the row.
+
+| Filter | What you see | Sort |
+| --- | --- | --- |
+| **Game HR%** | Talent × park × weather × pitcher HR/9 × platoon | high → low |
+| **Proj FD** | Floor · **Proj** (green) · Ceiling | Proj, then ceiling |
+| **Proj TB** | Expected total bases | high → low |
+| **H+R+RBI** | Projected hits + runs + RBI | high → low |
+
+**Proj FD** (FanDuel hitter scoring: 1B 3 · 2B 6 · 3B 9 · HR 12 · RBI 3.5 · R 3.2 · BB/HBP 3 · SB 6):
+
+```
+E[R]   = 0.11·PA + 0.40·HR + 0.15·(BB+HBP)
+E[RBI] = 0.10·PA + 0.55·HR
+Proj   = 3·1B + 6·2B + 9·3B + 12·HR + 3.5·RBI + 3.2·R + 3·(BB+HBP) + 6·SB
+```
+
+HR/PA already includes the game-HR stack. Floor / ceiling stress the same
+counting stats (quieter night / bigger night). Not FanDuel’s official projection.
+
+**Opponent color** tints only the opponent abbreviation (batter’s club stays white).
+This is **not** away=green / home=red:
+
+| Color | Opposing pitcher K% |
+| --- | --- |
+| Green | low — favorable for the batter |
+| Grey | middle tertile |
+| Red | high — tough for the batter |
+
+Cuts come from today’s starter K rates (SO/BF) when at least 20 are loaded.
+Fallback: **green < 21.6%**, **red > 23.4%**.
 
 ## Option 1 weather
 

@@ -43,6 +43,14 @@ data class OppKScale(
         return "Opp K% (team SO/PA, $src): red < $lo% · grey mid · green > $hi%"
     }
 
+    /** Daily Batters invert: low opposing-pitcher K% is favorable (green). */
+    fun batterLegend(): String {
+        val lo = String.format(Locale.US, "%.1f", lowMax * 100f)
+        val hi = String.format(Locale.US, "%.1f", highMin * 100f)
+        val src = if (fromLiveTertiles) "today’s starter K% tertiles" else "2024–25 MLB tertile cuts"
+        return "Opp pitcher K% ($src): green (favorable) < $lo% · grey mid · red (tough) > $hi%"
+    }
+
     companion object {
         /** ~33rd percentile of 2024–25 MLB team SO/PA. */
         const val FALLBACK_LOW = 0.216f

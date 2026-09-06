@@ -2,6 +2,7 @@ package com.pablitosb.sportsbook.ui.hr
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,17 +18,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Balance
-import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.Cloud
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Park
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.WbSunny
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,8 +36,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,37 +45,35 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pablitosb.sportsbook.data.hr.BatterOppTint
+import com.pablitosb.sportsbook.data.hr.HrSort
+import com.pablitosb.sportsbook.data.hr.HrSorter
+import com.pablitosb.sportsbook.data.mlb.OppKScale
+import com.pablitosb.sportsbook.data.mlb.OppKTier
 import com.pablitosb.sportsbook.data.model.HrBatter
-import com.pablitosb.sportsbook.data.model.Weather
 import com.pablitosb.sportsbook.data.starters.StartersRepository
 import com.pablitosb.sportsbook.theme.AccentGreen
-import com.pablitosb.sportsbook.theme.CardFill
-import com.pablitosb.sportsbook.theme.ChipFill
-import com.pablitosb.sportsbook.theme.MatchupBlue
 import com.pablitosb.sportsbook.theme.NavyBlack
-import com.pablitosb.sportsbook.theme.ParkPurple
+import com.pablitosb.sportsbook.theme.OpponentRed
 import com.pablitosb.sportsbook.theme.RegRed
+import com.pablitosb.sportsbook.theme.StableSlate
 import com.pablitosb.sportsbook.theme.TextMuted
 import com.pablitosb.sportsbook.theme.TextPrimary
 import com.pablitosb.sportsbook.ui.components.AwayAtHomeLine
-import com.pablitosb.sportsbook.ui.components.LiveBadge
-import com.pablitosb.sportsbook.ui.components.PlayerAvatar
-import com.pablitosb.sportsbook.ui.components.ScreenTopBar
 import com.pablitosb.sportsbook.ui.components.SectionRule
-import com.pablitosb.sportsbook.ui.components.SlateDateNavBar
-import com.pablitosb.sportsbook.ui.components.SlateLoading
-import com.pablitosb.sportsbook.ui.components.SlateMessage
-import com.pablitosb.sportsbook.ui.components.updatedLabel
+import com.pablitosb.sportsbook.ui.components.StubButton
+import com.pablitosb.sportsbook.ui.components.slateDateLabel
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -90,6 +89,11 @@ fun HrProbabilityScreen(
         is HrUiState.Error -> state.slateDate
         is HrUiState.Loading -> state.slateDate
     }
+    val liveLabel = when (val state = viewModel.ui) {
+        is HrUiState.Ready -> "Live • MLB"
+        is HrUiState.Empty -> state.sourceLabel
+        else -> "Live • MLB"
+    }
 
     Column(
         modifier = Modifier
@@ -98,15 +102,8 @@ fun HrProbabilityScreen(
             .statusBarsPadding()
             .navigationBarsPadding(),
     ) {
-        ScreenTopBar(
-            onBack = onBack,
-            trailing = {
-                IconButton(onClick = { viewModel.refresh() }) {
-                    Icon(Icons.Outlined.Refresh, contentDescription = "Refresh", tint = AccentGreen)
-                }
-            },
-        )
-        SlateDateNavBar(
+        BattersTopBar(onBack = onBack, liveLabel = liveLabel)
+        DateNavBar(
             date = slate,
             isToday = slate == viewModel.today,
             canPrev = slate > viewModel.minDate,
@@ -124,12 +121,14 @@ fun HrProbabilityScreen(
             DatePickerDialog(
                 onDismissRequest = { showPicker = false },
                 confirmButton = {
-                    TextButton(onClick = {
-                        pickerState.selectedDateMillis?.let { millis ->
-                            viewModel.goTo(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate())
-                        }
-                        showPicker = false
-                    }) { Text("Go", color = AccentGreen) }
+                    TextButton(
+                        onClick = {
+                            pickerState.selectedDateMillis?.let { millis ->
+                                viewModel.goTo(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate())
+                            }
+                            showPicker = false
+                        },
+                    ) { Text("Go", color = AccentGreen) }
                 },
                 dismissButton = {
                     TextButton(onClick = { showPicker = false }) { Text("Cancel", color = TextMuted) }
@@ -142,81 +141,149 @@ fun HrProbabilityScreen(
             modifier = Modifier.fillMaxSize(),
         ) {
             when (val state = viewModel.ui) {
-                is HrUiState.Loading -> SlateLoading(state.slateDate)
-                is HrUiState.Error -> SlateMessage(
-                    title = "HR board unavailable",
+                is HrUiState.Loading -> LoadingBody(state.slateDate)
+                is HrUiState.Error -> MessageBody(
+                    title = "Slate unavailable",
                     body = state.message,
                     onRetry = { viewModel.refresh() },
                 )
-                is HrUiState.Empty -> SlateMessage(
+                is HrUiState.Empty -> MessageBody(
                     title = "No hitters posted",
                     body = state.message,
                     onRetry = { viewModel.refresh() },
                     fetchedAt = state.fetchedAt,
-                    zone = StartersRepository.SLATE_ZONE,
                     badge = state.sourceLabel,
                 )
-                is HrUiState.Ready -> ReadyList(state.board.slate.sourceLabel, state.board.slate.fetchedAt, state.board.batters)
+                is HrUiState.Ready -> ReadyList(state, viewModel)
             }
         }
     }
 }
 
 @Composable
-private fun ReadyList(source: String, fetchedAt: java.time.Instant, batters: List<HrBatter>) {
+private fun BattersTopBar(onBack: () -> Unit, liveLabel: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onBack) {
+            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = AccentGreen)
+        }
+        Text(
+            "Daily Batters",
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        LiveChip(liveLabel)
+        Spacer(Modifier.width(8.dp))
+    }
+}
+
+@Composable
+private fun DateNavBar(
+    date: LocalDate,
+    isToday: Boolean,
+    canPrev: Boolean,
+    canNext: Boolean,
+    onPrev: () -> Unit,
+    onNext: () -> Unit,
+    onToday: () -> Unit,
+    onPick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onPrev, enabled = canPrev) {
+            Icon(
+                Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
+                contentDescription = "Previous day",
+                tint = if (canPrev) AccentGreen else TextMuted,
+            )
+        }
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .clickable(onClick = onPick)
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Icon(Icons.Outlined.CalendarMonth, null, tint = AccentGreen, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                slateDateLabel(date) + if (isToday) "  ·  Today" else "",
+                color = AccentGreen,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+            )
+        }
+        IconButton(onClick = onNext, enabled = canNext) {
+            Icon(
+                Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                contentDescription = "Next day",
+                tint = if (canNext) AccentGreen else TextMuted,
+            )
+        }
+        if (!isToday) {
+            TextButton(onClick = onToday) {
+                Text("Today", color = AccentGreen, fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReadyList(state: HrUiState.Ready, viewModel: HrViewModel) {
+    val board = state.board
+    val sorted = remember(board.batters, viewModel.sortKey, viewModel.sortAscending) {
+        HrSorter.sort(board.batters, viewModel.sortKey, viewModel.sortAscending)
+    }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 12.dp),
     ) {
         item {
+            FilterTabRow(selected = viewModel.sortKey, onSelect = { viewModel.selectSort(it) })
             Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                LiveBadge(source)
-                Spacer(Modifier.weight(1f))
-                Text(updatedLabel(fetchedAt, StartersRepository.SLATE_ZONE), color = TextMuted, fontSize = 11.sp)
-            }
-            Spacer(Modifier.height(10.dp))
-            Text("Daily HR Probability", color = TextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Bold)
             Text(
-                "Ranked by game HR% • talent × park × weather × pitcher × platoon",
+                board.oppKScale.batterLegend(),
                 color = TextMuted,
-                fontSize = 13.sp,
+                fontSize = 10.sp,
+                lineHeight = 13.sp,
             )
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                FactorChip("HR%/ISO/FB talent", Icons.Outlined.BarChart, AccentGreen)
-                FactorChip("Matchup / platoon", Icons.Outlined.Balance, MatchupBlue)
-                FactorChip("Park / weather", Icons.Outlined.Park, ParkPurple)
-            }
-            Spacer(Modifier.height(14.dp))
-            Row(Modifier.fillMaxWidth()) {
-                Text("BATTER", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                Text("GAME HR%", color = AccentGreen, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.width(12.dp))
-                Text("SEASON", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-            }
+            Text(updatedLabel(board.slate.fetchedAt), color = TextMuted, fontSize = 10.sp)
             Spacer(Modifier.height(6.dp))
-            SectionRule()
         }
-        items(batters, key = { "${it.mlbId}-${it.rank}" }) { batter ->
-            HrRow(batter)
+        itemsIndexed(sorted, key = { _, it -> "${it.mlbId}-${it.gamePkKey()}" }) { index, batter ->
+            BatterRow(batter, viewModel.sortKey, index + 1, board.oppKScale)
             SectionRule()
         }
         item {
             Spacer(Modifier.height(14.dp))
+            MatchupLegend(board.oppKScale)
+            Spacer(Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.Top) {
                 Icon(Icons.Outlined.Info, null, tint = AccentGreen, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    "p_PA = shrink(0.70·HR/PA + 0.20·ISO proxy + 0.10·FB proxy) × park × weather × pitcher HR/9 × platoon. " +
-                        "Pr(HR) = 1 − (1 − p_PA)^PA. No Statcast barrels — ISO/FB from MLB Stats API. " +
-                        "Lineups when posted; otherwise active roster hitters. Network failure shows Retry, not mock names.",
+                    "Game HR% = talent × park × weather × pitcher HR/9 × platoon. " +
+                        "Proj FD uses FanDuel hitter scoring (1B 3 · 2B 6 · 3B 9 · HR 12 · RBI 3.5 · R 3.2 · BB/HBP 3 · SB 6). " +
+                        "H+R+RBI = projected hits + runs + RBI. Weather boost is hitter-perspective " +
+                        "(+ green / − red) from park + MLB weather hydrate. Lineups when posted; else roster.",
                     color = AccentGreen,
                     fontSize = 11.sp,
+                    lineHeight = 15.sp,
                 )
             }
             Spacer(Modifier.height(24.dp))
@@ -224,131 +291,260 @@ private fun ReadyList(source: String, fetchedAt: java.time.Instant, batters: Lis
     }
 }
 
-@Composable
-private fun FactorChip(label: String, icon: ImageVector, color: Color) {
-    Row(
-        modifier = Modifier
-            .background(color.copy(alpha = 0.12f), RoundedCornerShape(20.dp))
-            .border(1.dp, color.copy(alpha = 0.45f), RoundedCornerShape(20.dp))
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, null, tint = color, modifier = Modifier.size(14.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(label, color = color, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-    }
-}
+private fun HrBatter.gamePkKey(): String = "$homeAway-$gameTimeLabel-$battingOrder"
 
 @Composable
-private fun HrRow(batter: HrBatter) {
-    Column(
+private fun FilterTabRow(selected: HrSort, onSelect: (HrSort) -> Unit) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .drawBehind {
-                drawLine(
-                    color = AccentGreen,
-                    start = Offset(0f, 10.dp.toPx()),
-                    end = Offset(0f, size.height - 10.dp.toPx()),
-                    strokeWidth = 3.dp.toPx(),
-                )
-            }
-            .padding(start = 10.dp, top = 12.dp, bottom = 12.dp),
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.Bottom,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                batter.rank.toString(),
-                color = TextPrimary,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                modifier = Modifier.width(20.dp),
-            )
-            PlayerAvatar(batter.name, batter.team, size = 38.dp)
-            Spacer(Modifier.width(8.dp))
-            Column(Modifier.weight(1f)) {
-                Text(batter.name, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    AwayAtHomeLine(
-                        team = batter.team,
-                        opponent = batter.opponent,
-                        homeAway = batter.homeAway,
-                        awayAbbr = batter.awayAbbr,
-                        homeAbbr = batter.homeAbbr,
-                        fontSize = 11.sp,
-                    )
-                    Text("  ${batter.pitcherHand}", color = MatchupBlue, fontSize = 11.sp)
-                }
-                val extra = buildList {
-                    if (batter.battingOrder != null) add("#${batter.battingOrder}")
-                    if (batter.sourceNote.isNotBlank()) add(batter.sourceNote)
-                }.joinToString(" · ")
-                if (extra.isNotBlank()) Text(extra, color = TextMuted, fontSize = 10.sp)
-            }
-            Column(horizontalAlignment = Alignment.End) {
+        listOf(
+            HrSort.GAME_HR to "Game HR%",
+            HrSort.PROJ_FD to "Proj FD",
+            HrSort.PROJ_TB to "Proj TB",
+            HrSort.HRR to "H+R+RBI",
+        ).forEach { (key, label) ->
+            val on = key == selected
+            Column(
+                modifier = Modifier
+                    .clickable { onSelect(key) }
+                    .padding(top = 6.dp, start = 8.dp, end = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
                 Text(
-                    String.format(Locale.US, "%.1f%%", batter.gameHrPct),
-                    color = AccentGreen,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
+                    label,
+                    color = if (on) TextPrimary else TextMuted,
+                    fontSize = 13.sp,
+                    fontWeight = if (on) FontWeight.Bold else FontWeight.Medium,
+                    maxLines = 1,
                 )
-                Text(
-                    String.format(Locale.US, "%.1f%% szn HR/PA", batter.seasonHrPct),
-                    color = TextPrimary,
-                    fontSize = 11.sp,
+                Spacer(Modifier.height(6.dp))
+                Box(
+                    Modifier
+                        .width(56.dp)
+                        .height(3.dp)
+                        .background(if (on) AccentGreen else Color.Transparent, RoundedCornerShape(2.dp)),
                 )
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            MiniChip("talent ${batter.xHrPct}%", AccentGreen)
-            MiniChip(signed(batter.parkAdjPct) + "  ${batter.parkName}", ParkPurple)
-            WeatherBit(batter.weather, batter.tempF)
-        }
-        Spacer(Modifier.height(6.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            MiniChip(
-                "${signed(batter.pitcherAdjPct)}  ${batter.pitcherName}  ${String.format(Locale.US, "%.2f HR/9", batter.pitcherHr9)}",
-                if (batter.pitcherAdjPct >= 0) MatchupBlue else RegRed,
-            )
-            if (batter.regressionLean) {
-                Spacer(Modifier.width(6.dp))
-                MiniChip("REG LEAN", RegRed)
             }
         }
     }
 }
 
 @Composable
-private fun MiniChip(text: String, color: Color) {
+private fun MatchupLegend(scale: OppKScale) {
+    Column {
+        Text(
+            "MATCHUP COLOR (BATTER VIEW)",
+            color = TextMuted,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.6.sp,
+        )
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            LegendSwatch(AccentGreen, "Favorable")
+            LegendSwatch(StableSlate, "Mid")
+            LegendSwatch(RegRed, "Tough")
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "Batter’s club stays white. Opponent is colored by opposing pitcher K% — " +
+                "not home/away. ${scale.batterLegend()}",
+            color = TextMuted,
+            fontSize = 10.sp,
+            lineHeight = 14.sp,
+        )
+    }
+}
+
+@Composable
+private fun LegendSwatch(color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Box(Modifier.size(7.dp).background(color, CircleShape))
+        Text(label, color = color, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun LiveChip(label: String) {
     Box(
         modifier = Modifier
-            .background(ChipFill, RoundedCornerShape(8.dp))
-            .border(1.dp, color.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+            .background(AccentGreen.copy(alpha = 0.14f), RoundedCornerShape(20.dp))
+            .border(1.dp, AccentGreen.copy(alpha = 0.55f), RoundedCornerShape(20.dp))
             .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
-        Text(text, color = color, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(6.dp).background(AccentGreen, CircleShape))
+            Spacer(Modifier.width(6.dp))
+            Text(label, color = AccentGreen, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        }
     }
 }
 
 @Composable
-private fun WeatherBit(weather: Weather, tempF: Int) {
-    Row(
-        modifier = Modifier
-            .background(CardFill, RoundedCornerShape(8.dp))
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            if (weather == Weather.SUN) Icons.Outlined.WbSunny else Icons.Outlined.Cloud,
-            null,
-            tint = AccentGreen,
-            modifier = Modifier.size(12.dp),
-        )
-        Spacer(Modifier.width(4.dp))
-        Text(if (tempF > 0) "$tempF°" else "—", color = TextMuted, fontSize = 11.sp)
+private fun LoadingBody(date: LocalDate) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            CircularProgressIndicator(color = AccentGreen, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
+            Spacer(Modifier.height(12.dp))
+            Text("Loading MLB slate for ${slateDateLabel(date)}…", color = TextMuted, fontSize = 13.sp)
+        }
     }
 }
 
-private fun signed(value: Int): String = if (value > 0) "+$value%" else "$value%"
+@Composable
+private fun MessageBody(
+    title: String,
+    body: String,
+    onRetry: () -> Unit,
+    fetchedAt: Instant? = null,
+    badge: String? = null,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (badge != null) LiveChip(badge)
+        Spacer(Modifier.height(16.dp))
+        Text(title, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 20.sp)
+        Spacer(Modifier.height(8.dp))
+        Text(body, color = TextMuted, fontSize = 14.sp)
+        if (fetchedAt != null) {
+            Spacer(Modifier.height(6.dp))
+            Text(updatedLabel(fetchedAt), color = TextMuted, fontSize = 11.sp)
+        }
+        Spacer(Modifier.height(18.dp))
+        StubButton(label = "Retry", onClick = onRetry, filled = true)
+    }
+}
+
+@Composable
+private fun BatterRow(batter: HrBatter, sortKey: HrSort, displayRank: Int, scale: OppKScale) {
+    val oppColor = when (val tier = scale.tier(batter.oppPitcherK)) {
+        OppKTier.UNKNOWN -> StableSlate
+        else -> when {
+            BatterOppTint.favorable(tier) -> AccentGreen
+            BatterOppTint.tough(tier) -> OpponentRed
+            else -> StableSlate
+        }
+    }
+    val boostColor = when {
+        batter.envBoostPct > 0 -> AccentGreen
+        batter.envBoostPct < 0 -> RegRed
+        else -> TextMuted
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            displayRank.toString(),
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp,
+            modifier = Modifier.width(22.dp),
+        )
+        Column(Modifier.weight(1.15f)) {
+            Text(
+                batter.name,
+                color = TextPrimary,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            AwayAtHomeLine(
+                team = batter.team,
+                opponent = batter.opponent,
+                homeAway = batter.homeAway,
+                awayAbbr = batter.awayAbbr,
+                homeAbbr = batter.homeAbbr,
+                time = batter.gameTimeLabel,
+                opponentColor = oppColor,
+                fontSize = 11.sp,
+            )
+        }
+        SelectedStat(
+            batter,
+            sortKey,
+            Modifier.weight(if (sortKey == HrSort.PROJ_FD) 1.35f else 0.85f),
+        )
+        Column(
+            horizontalAlignment = Alignment.End,
+            modifier = Modifier.padding(start = 4.dp),
+        ) {
+            Text("Weather boost", color = TextMuted, fontSize = 8.sp, fontWeight = FontWeight.Medium)
+            Text(
+                if (batter.envBoostPct > 0) "+${batter.envBoostPct}%" else "${batter.envBoostPct}%",
+                color = boostColor,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SelectedStat(batter: HrBatter, sortKey: HrSort, modifier: Modifier = Modifier) {
+    if (sortKey == HrSort.PROJ_FD) {
+        Row(
+            modifier = modifier,
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            FdCell("Floor", String.format(Locale.US, "%.1f", batter.fdFloor), TextPrimary, 13.sp)
+            FdCell("Proj", String.format(Locale.US, "%.1f", batter.fdProj), AccentGreen, 18.sp)
+            FdCell("Ceiling", String.format(Locale.US, "%.1f", batter.fdCeiling), TextPrimary, 13.sp)
+        }
+        return
+    }
+    val (label, value, sub) = when (sortKey) {
+        HrSort.GAME_HR -> Triple(
+            "Game HR%",
+            String.format(Locale.US, "%.1f%%", batter.gameHrPct),
+            null,
+        )
+        HrSort.PROJ_TB -> Triple(
+            "Proj TB",
+            String.format(Locale.US, "%.2f", batter.projTb),
+            null,
+        )
+        HrSort.HRR -> Triple(
+            "H+R+RBI",
+            String.format(Locale.US, "%.2f", batter.projHrr),
+            String.format(Locale.US, "H %.1f · R %.1f · RBI %.1f", batter.projHits, batter.projRuns, batter.projRbi),
+        )
+        HrSort.PROJ_FD -> Triple("Proj FD", "", null)
+    }
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.Center) {
+            Text(label, color = TextMuted, fontSize = 10.sp, modifier = Modifier.padding(end = 4.dp, bottom = 2.dp))
+            Text(value, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 20.sp, maxLines = 1)
+        }
+        if (sub != null) {
+            Text(sub, color = TextMuted, fontSize = 9.sp, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun FdCell(label: String, value: String, color: Color, valueSize: androidx.compose.ui.unit.TextUnit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, color = TextMuted, fontSize = 8.sp, fontWeight = FontWeight.Medium)
+        Text(value, color = color, fontSize = valueSize, fontWeight = FontWeight.Bold, maxLines = 1)
+    }
+}
+
+private fun updatedLabel(instant: Instant): String {
+    val local = instant.atZone(StartersRepository.SLATE_ZONE)
+    return "Updated " + local.format(DateTimeFormatter.ofPattern("h:mm a z", Locale.US))
+}

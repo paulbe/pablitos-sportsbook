@@ -98,8 +98,8 @@ fun HomeScreen(onOpen: (Dest) -> Unit) {
             Spacer(Modifier.height(12.dp))
             HomeTile(
                 icon = Icons.Outlined.SportsBaseball,
-                title = "Daily HR Probability",
-                subtitle = "Live lineups · game HR%",
+                title = "Daily Batters",
+                subtitle = "Game HR% · Proj FD · Proj TB · H+R+RBI",
                 onClick = { onOpen(Dest.HrProb) },
             )
             Spacer(Modifier.height(12.dp))

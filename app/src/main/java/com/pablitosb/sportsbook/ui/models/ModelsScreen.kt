@@ -35,7 +35,11 @@ fun ModelsScreen(onBack: () -> Unit) {
             "Prog · Proj Ks · xwOBA · Proj Outs · Proj FD — Weather boost, opp K% colors",
             "Proj FD = 3×Ks + Outs + 6×P(W) + 4×P(QS) − 3×E[ER]",
         ),
-        Triple("Game HR", "Talent × park × weather × pitcher × platoon", "Daily home-run probability board"),
+        Triple(
+            "Daily Batters",
+            "Game HR% · Proj FD · Proj TB · H+R+RBI — Weather boost, inverted opp K%",
+            "HR% = talent × park × weather × pitcher × platoon · FD = FanDuel hitter table",
+        ),
         Triple("DFS Optimizer (beta)", "FanDuel salary, stacks, and ownership levers", "Home → Beta → DFS Lineups"),
         Triple("FD DFS Projections (beta)", "Same live FD-point pipeline, ranked board", "Home → Beta → FD DFS Projections"),
         Triple("Prop Edge (beta)", "Model win% minus Underdog implied%", "Home → Beta → Underdog Props"),

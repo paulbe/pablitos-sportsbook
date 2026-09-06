@@ -12,8 +12,8 @@ android {
         applicationId = "com.pablitosb.sportsbook"
         minSdk = 26
         targetSdk = 36
-        versionCode = 19
-        versionName = "1.18.0"
+        versionCode = 20
+        versionName = "1.19.0"
     }
 
     buildTypes {

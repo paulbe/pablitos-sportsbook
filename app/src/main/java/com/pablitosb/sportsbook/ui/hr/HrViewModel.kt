@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pablitosb.sportsbook.data.hr.HrBoard
 import com.pablitosb.sportsbook.data.hr.HrRepository
+import com.pablitosb.sportsbook.data.hr.HrSort
+import com.pablitosb.sportsbook.data.hr.HrSorter
 import com.pablitosb.sportsbook.data.projections.SlateLoadException
 import com.pablitosb.sportsbook.data.starters.StartersRepository
 import java.time.Instant
@@ -45,11 +47,24 @@ class HrViewModel(
         private set
     var refreshing by mutableStateOf(false)
         private set
+    var sortKey by mutableStateOf(HrSort.GAME_HR)
+        private set
+    var sortAscending by mutableStateOf(HrSorter.defaultAscending(HrSort.GAME_HR))
+        private set
 
     private var loadJob: Job? = null
 
     init {
         refresh(initial = true)
+    }
+
+    fun selectSort(key: HrSort) {
+        if (key == sortKey) {
+            sortAscending = !sortAscending
+        } else {
+            sortKey = key
+            sortAscending = HrSorter.defaultAscending(key)
+        }
     }
 
     fun shiftDays(days: Long) = goTo(selectedDate.plusDays(days))

@@ -245,6 +245,7 @@ class ProjectionService(
                 seasonDoubles = doubles,
                 seasonTriples = triples,
                 seasonBb = stat?.optIntOrNull("baseOnBalls") ?: 0,
+                seasonHbp = stat?.optIntOrNull("hitByPitch") ?: 0,
                 seasonSb = stat?.optIntOrNull("stolenBases") ?: 0,
                 seasonR = stat?.optIntOrNull("runs") ?: 0,
                 seasonRbi = stat?.optIntOrNull("rbi") ?: 0,
@@ -268,6 +269,7 @@ class ProjectionService(
                 awayAbbr = game.awayAbbr,
                 homeAbbr = game.homeAbbr,
                 homeAway = homeAway,
+                gameTimeLabel = game.gameTimeLabel,
             )
         }.sortedByDescending { it.gameHrProb }
 
@@ -348,6 +350,7 @@ class ProjectionService(
             weather = WeatherAdj.icon(condition),
             tempF = temp,
             wind = wind,
+            condition = condition,
             weatherFactor = WeatherAdj.factor(condition, temp, wind),
             parkHrFactor = ParkFactors.hrMultiplier(venueId, venueName),
             homeAbbr = homeAbbr,

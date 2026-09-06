@@ -78,6 +78,17 @@ data class HrBatter(
     val awayAbbr: String = "",
     val homeAbbr: String = "",
     val homeAway: String = "",
+    val gameTimeLabel: String = "",
+    val envBoostPct: Int = 0,
+    val fdFloor: Float = 0f,
+    val fdProj: Float = 0f,
+    val fdCeiling: Float = 0f,
+    val projTb: Float = 0f,
+    val projHits: Float = 0f,
+    val projRuns: Float = 0f,
+    val projRbi: Float = 0f,
+    val projHrr: Float = 0f,
+    val oppPitcherK: Float? = null,
 )
 
 data class DfsPlayer(

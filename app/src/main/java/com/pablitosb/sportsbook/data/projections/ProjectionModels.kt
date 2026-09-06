@@ -14,6 +14,7 @@ data class SlateGame(
     val weather: Weather,
     val tempF: Int,
     val wind: String,
+    val condition: String = "",
     val weatherFactor: Float,
     val parkHrFactor: Float,
     val homeAbbr: String,
@@ -77,6 +78,14 @@ data class HitterProjection(
     val awayAbbr: String = "",
     val homeAbbr: String = "",
     val homeAway: String = "",
+    val gameTimeLabel: String = "",
+    val envBoostPct: Int = 0,
+    val expectedRuns: Float = 0f,
+    val expectedRbi: Float = 0f,
+    val seasonHbp: Int = 0,
+    val fdFloor: Float = 0f,
+    val fdCeiling: Float = 0f,
+    val oppPitcherK: Float? = null,
 )
 
 data class PitcherProjection(

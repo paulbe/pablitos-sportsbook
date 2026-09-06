@@ -250,7 +250,7 @@ private fun ReadyPicks(board: TopPicksBoard, viewModel: TopPicksViewModel) {
                 Spacer(Modifier.width(6.dp))
                 Text(
                     "Top Picks formulas — SP Ks: Proj Ks (rain last) from live probables. " +
-                        "HR: Daily HR game%. TB: PA × (1·1B + 2·2B + 3·3B + 4·HR) per PA, " +
+                        "HR: Daily Batters game%. TB: PA × (1·1B + 2·2B + 3·3B + 4·HR) per PA, " +
                         "shrunk season rates with park / pitcher / weather. " +
                         "FD value: FanDuel pts per \$1k (EXAMPLE salaries unless imported). " +
                         "Timezone: America/Los_Angeles.",
