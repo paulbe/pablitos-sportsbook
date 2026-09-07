@@ -19,11 +19,11 @@ class OutlookCalculatorTest {
 
     @Test
     fun expectedBfClampsToBand() {
-        val sample = workhorse(seasonBf = 900, seasonIp = 80f)
-        assertEquals(12f, OutlookCalculator.expectedBf(sample, 3.5f), 0.01f)
-        val sparse = workhorse(seasonBf = 200, seasonIp = 120f)
-        assertEquals(32f, OutlookCalculator.expectedBf(sample.copy(seasonBf = 200, seasonIp = 20f), 7.2f), 0.01f)
-        assertTrue(OutlookCalculator.expectedBf(sparse, 7.2f) in 12f..32f)
+        val highRate = workhorse(seasonBf = 900, seasonIp = 80f)
+        assertEquals(32f, OutlookCalculator.expectedBf(highRate, 7.2f), 0.01f)
+        val lowRate = workhorse(seasonBf = 200, seasonIp = 120f)
+        assertEquals(12f, OutlookCalculator.expectedBf(lowRate, 3.5f), 0.01f)
+        assertTrue(OutlookCalculator.expectedBf(lowRate, 7.2f) in 12f..32f)
     }
 
     @Test
