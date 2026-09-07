@@ -8,7 +8,7 @@ import androidx.navigation.compose.rememberNavController
 import com.pablitosb.sportsbook.ui.dfs.DfsLineupsScreen
 import com.pablitosb.sportsbook.ui.fdproj.FdProjScreen
 import com.pablitosb.sportsbook.ui.home.BetaScreen
-import com.pablitosb.sportsbook.ui.home.HomeScreen
+import com.pablitosb.sportsbook.ui.home.SportHubScreen
 import com.pablitosb.sportsbook.ui.hr.HrProbabilityScreen
 import com.pablitosb.sportsbook.ui.models.ModelsScreen
 import com.pablitosb.sportsbook.ui.props.UnderdogPropsScreen
@@ -40,7 +40,7 @@ fun AppNav(modifier: Modifier = Modifier) {
         startDestination = Dest.Home.route,
         modifier = modifier,
     ) {
-        composable(Dest.Home.route) { HomeScreen(onOpen = open) }
+        composable(Dest.Home.route) { SportHubScreen(onOpen = open) }
         composable(Dest.Beta.route) { BetaScreen(onBack = back, onOpen = open) }
         composable(Dest.Starters.route) { StartersScreen(onBack = back) }
         composable(Dest.HrProb.route) { HrProbabilityScreen(onBack = back) }

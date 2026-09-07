@@ -20,6 +20,9 @@ Android app for **today’s MLB slate** — live projected starters, **Daily Bat
 
 Footer: **Models** · **Settings**. DFS / Props / FD projections are no longer primary home tiles.
 
+Swipe left from the baseball hub to **NFL Edge** (four Coming soon placeholders).
+Swipe right to return. Baseball boards are unchanged.
+
 ## Today’s Top Picks
 
 A ranked “best of today” board. Same models as **Projected Starters** and
