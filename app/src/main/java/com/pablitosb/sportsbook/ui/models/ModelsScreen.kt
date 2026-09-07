@@ -33,7 +33,7 @@ fun ModelsScreen(onBack: () -> Unit) {
         Triple(
             "SP Progression",
             "Prog · Proj Ks · xwOBA · Proj Outs · Proj FD — Weather boost, opp K% colors",
-            "Proj Ks v2 = proj K% × projIp × BF/IP (same IP as Outs). Proj FD = 3×Ks + Outs + 6×P(W) + 4×P(QS) − 3×E[ER]",
+            "Proj FD = 3×Ks + Outs + 6×P(W) + 4×P(QS) − 3×E[ER]",
         ),
         Triple(
             "Daily Batters",

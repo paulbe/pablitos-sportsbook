@@ -319,8 +319,7 @@ private fun ReadyList(state: StartersUiState.Ready, viewModel: StartersViewModel
                     "Filters: Prog · Proj Ks · xwOBA · Proj Outs · Proj FD. " +
                         "Other filters stay single-stat; Proj FD shows Floor · Proj · Ceiling. " +
                         "Outlook = quality (proj K% vs 22.5% lg) + last-5-GS vs season K% trajectory. " +
-                        "Proj Ks v2 = proj K% × (same projIp as Outs × season BF/IP); openers ×0.65. " +
-                        "Proj Outs = matchup-adjusted IP × 3. " +
+                        "Proj Ks ≈ proj K% × expected BF. Proj Outs = matchup-adjusted IP × 3. " +
                         "Proj FD = 3×Ks + Outs + 6×P(W) + 4×P(QS) − 3×E[ER] (matchup ERA, home, rain). " +
                         "Weather boost % = HR park + park-relative wind + temp (+ = hitter-friendly). " +
                         "Pitcher’s team stays white; opponent tint is team K% tertiles. " +
