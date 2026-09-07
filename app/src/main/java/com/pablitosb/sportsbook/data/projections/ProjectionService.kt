@@ -508,6 +508,8 @@ class ProjectionService(
         val strikes = prior.sumOf { it.optObj("stat")?.optIntOrNull("strikes") ?: 0 }
         val pitches = prior.sumOf { it.optObj("stat")?.optIntOrNull("numberOfPitches") ?: 0 }
         val recent = starts.takeLast(5)
+        val startIp = starts.map { StatMath.parseInnings(it.optObj("stat")?.optString("inningsPitched")) }
+        val recentIpList = recent.map { StatMath.parseInnings(it.optObj("stat")?.optString("inningsPitched")) }
         return OutlookCalculator.PitchingSample(
             seasonSo = seasonSo,
             seasonBf = seasonBf,
@@ -517,6 +519,11 @@ class ProjectionService(
             recentBf = recent.sumOf { it.optObj("stat")?.optIntOrNull("battersFaced") ?: 0 },
             lastStartBf = recent.lastOrNull()?.optObj("stat")?.optIntOrNull("battersFaced"),
             lastStartKs = starts.takeLast(6).map { (it.optObj("stat")?.optIntOrNull("strikeOuts") ?: 0).toFloat() },
+            seasonIp = startIp.sum(),
+            recentIp = recentIpList.sum(),
+            recentGs = recent.size,
+            lastStartIp = recentIpList.lastOrNull()?.takeIf { it > 0f },
+            last5Ip = recentIpList,
         )
     }
 

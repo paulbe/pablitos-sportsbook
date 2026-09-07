@@ -104,7 +104,6 @@ class StartersRepository(
                 .thenByDescending { it.second.projK },
         )
         val starters = projected.mapIndexed { index, (row, projection, sample) ->
-            val predKs = projection.nextStartKs
             val predKPct = projection.projK * 100f
             val dayLog = logsById[row.mlbId].orEmpty().firstOrNull { log ->
                 logDate(log) == slate && (log.optObj("stat")?.optIntOrNull("gamesStarted") ?: 0) >= 1
@@ -125,6 +124,7 @@ class StartersRepository(
                     rain = row.wx.tag == WxTag.RAIN_RISK,
                 ),
             )
+            val predKs = projection.projK * OutlookCalculator.expectedBf(sample, outs.projIp)
             val (awayAbbr, homeAbbr) = if (row.homeAway == "home") {
                 row.opponent to row.team
             } else {

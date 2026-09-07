@@ -104,6 +104,7 @@ The bundled EXAMPLE file uses the same schema.
 - There is no standalone Total Bases home tile. Proj TB on Daily Batters and Top Picks share the same expected-TB formula.
 - DFS Lineups, Underdog Props, and FD DFS Projections live under **Beta**, not on the main home list.
 - Proj Outs is a local IP model (recent/season logs + opponent OPS + Weather boost + early exits), not Statcast or a pitch-count feed.
+- Proj Ks v2 uses that same projIp × season BF/IP (openers ×0.65). proj K% is unchanged.
 - Starter opponent K colors use season team SO/PA. Daily Batters tints the opponent by **opposing pitcher K%**, inverted (green = low-K / favorable). Sparse samples fall back to 21.6% / 23.4%. Retractable roofs stay outdoor unless MLB says closed.
 - Proj FD W / QS / ER terms (starters) and Floor / Ceiling counting-stat stress (batters) are local heuristics, not FanDuel official projections.
 - Daily Batters **Weather boost** uses the MLB schedule weather hydrate plus the park HR factor. It does **not** fetch Open-Meteo on that path (starters do). + is hitter-friendly.
@@ -176,6 +177,17 @@ projOuts = projIp × 3
 ```
 
 Optional `~IP` subtitle under the outs figure.
+
+**Proj Ks v2** keeps proj K% (shrink toward 22.5%) and replaces season BF/GS with the
+same `projIp` as Proj Outs:
+
+```
+expectedBF = clamp(projIp × season BF/IP, 12 … 32)
+if season IP/GS < 4.0 OR last start IP < 3.0: expectedBF *= 0.65
+ProjKs     = projK% × expectedBF
+```
+
+Sep 2–6 2026 offline backtest: MAE 2.15→1.87, bias +0.62→~0, r 0.17→0.41.
 
 **Proj FD** (FanDuel pitcher scoring: SO 3 · IP 3/inning · W 6 · QS 4 · ER −3):
 
