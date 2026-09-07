@@ -291,7 +291,7 @@ class QbProjectionsRepository(
         return start.atZone(zone).format(DateTimeFormatter.ofPattern("h:mm a", Locale.US))
     }
 
-    private suspend fun <T> cachedValue(map: ConcurrentHashMap<String, T>, key: String, load: suspend () -> T): T {
+    private suspend fun <T : Any> cachedValue(map: ConcurrentHashMap<String, T>, key: String, load: suspend () -> T): T {
         map[key]?.let { return it }
         val value = load()
         map.putIfAbsent(key, value)
