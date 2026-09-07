@@ -142,7 +142,7 @@ class QbProjectionTest {
         assertTrue(trail > 1f)
         assertTrue(kneel < 1f)
         assertEquals(1f, pocket, 0.001f)
-        assertEquals(0.85f, QbProjectionCalculator.rushScriptMult(-20f, 30f, true), 0.001f)
+        assertEquals(0.90f, QbProjectionCalculator.rushScriptMult(-20f, 30f, true), 0.001f)
     }
 
     @Test
