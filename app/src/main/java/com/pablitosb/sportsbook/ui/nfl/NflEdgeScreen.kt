@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SportsFootball
 import androidx.compose.material.icons.outlined.Swipe
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarHost
@@ -130,9 +131,9 @@ fun NflEdgeScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     tiles.take(2).forEach { tile ->
-                        PlaceholderTile(
+                        HubTile(
                             tile = tile,
-                            onClick = { scope.launch { snackbar.showSnackbar("Coming soon") } },
+                            onClick = { openTile(tile, onOpen, snackbar, scope) },
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -143,9 +144,9 @@ fun NflEdgeScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     tiles.drop(2).forEach { tile ->
-                        PlaceholderTile(
+                        HubTile(
                             tile = tile,
-                            onClick = { scope.launch { snackbar.showSnackbar("Coming soon") } },
+                            onClick = { openTile(tile, onOpen, snackbar, scope) },
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -165,12 +166,27 @@ fun NflEdgeScreen(
     }
 }
 
+private fun openTile(
+    tile: NflPlaceholder,
+    onOpen: (Dest) -> Unit,
+    snackbar: SnackbarHostState,
+    scope: kotlinx.coroutines.CoroutineScope,
+) {
+    val dest = tile.dest
+    if (dest != null) {
+        onOpen(dest)
+    } else {
+        scope.launch { snackbar.showSnackbar("Coming soon") }
+    }
+}
+
 @Composable
-private fun PlaceholderTile(
+private fun HubTile(
     tile: NflPlaceholder,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val live = tile.dest != null
     val shape = RoundedCornerShape(16.dp)
     Column(
         modifier = modifier
@@ -184,11 +200,16 @@ private fun PlaceholderTile(
         Box(
             modifier = Modifier
                 .size(44.dp)
-                .border(1.5.dp, AccentGreen, CircleShape)
-                .background(Color.Transparent, CircleShape),
+                .background(if (live) AccentGreen else Color.Transparent, CircleShape)
+                .border(1.5.dp, AccentGreen, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Outlined.Remove, contentDescription = null, tint = AccentGreen, modifier = Modifier.size(20.dp))
+            Icon(
+                if (live) Icons.Outlined.SportsFootball else Icons.Outlined.Remove,
+                contentDescription = null,
+                tint = if (live) NavyBlack else AccentGreen,
+                modifier = Modifier.size(20.dp),
+            )
         }
         Spacer(Modifier.height(12.dp))
         Text(

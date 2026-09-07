@@ -11,6 +11,7 @@ import com.pablitosb.sportsbook.ui.home.BetaScreen
 import com.pablitosb.sportsbook.ui.home.SportHubScreen
 import com.pablitosb.sportsbook.ui.hr.HrProbabilityScreen
 import com.pablitosb.sportsbook.ui.models.ModelsScreen
+import com.pablitosb.sportsbook.ui.nfl.QbProjectionsScreen
 import com.pablitosb.sportsbook.ui.props.UnderdogPropsScreen
 import com.pablitosb.sportsbook.ui.settings.SettingsScreen
 import com.pablitosb.sportsbook.ui.starters.StartersScreen
@@ -27,6 +28,7 @@ enum class Dest(val route: String) {
     Beta("beta"),
     Models("models"),
     Settings("settings"),
+    QbWeekly("qbweekly"),
 }
 
 @Composable
@@ -50,5 +52,6 @@ fun AppNav(modifier: Modifier = Modifier) {
         composable(Dest.TopPicks.route) { TopPicksScreen(onBack = back) }
         composable(Dest.Models.route) { ModelsScreen(onBack = back) }
         composable(Dest.Settings.route) { SettingsScreen(onBack = back) }
+        composable(Dest.QbWeekly.route) { QbProjectionsScreen(onBack = back) }
     }
 }

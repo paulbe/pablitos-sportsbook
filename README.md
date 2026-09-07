@@ -20,8 +20,8 @@ Android app for **today’s MLB slate** — live projected starters, **Daily Bat
 
 Footer: **Models** · **Settings**. DFS / Props / FD projections are no longer primary home tiles.
 
-Swipe left from the baseball hub to **NFL Edge** (four Coming soon placeholders).
-Swipe right to return. Baseball boards are unchanged.
+Swipe left from the baseball hub to **NFL Edge**. Tile 1 is **QB Projections Weekly**;
+tiles 2–4 stay Coming soon. Swipe right to return. Baseball boards are unchanged.
 
 ## Today’s Top Picks
 
@@ -107,6 +107,41 @@ The bundled EXAMPLE file uses the same schema.
 - Starter opponent K colors use season team SO/PA. Daily Batters tints the opponent by **opposing pitcher K%**, inverted (green = low-K / favorable). Sparse samples fall back to 21.6% / 23.4%. Retractable roofs stay outdoor unless MLB says closed.
 - Proj FD W / QS / ER terms (starters) and Floor / Ceiling counting-stat stress (batters) are local heuristics, not FanDuel official projections.
 - Daily Batters **Weather boost** uses the MLB schedule weather hydrate plus the park HR factor. It does **not** fetch Open-Meteo on that path (starters do). + is hitter-friendly.
+
+## NFL Edge — QB Projections Weekly (v0.1.23)
+
+NFL-only board. Baseball home and MLB screens are not part of this path.
+
+**Hub:** tile 1 **1 QB Projections Weekly** / “Next-game pass yards” opens the board.
+Tiles 2–4 remain Coming soon.
+
+**Badge:** `EXAMPLE • ESPN` — Next Gen Stats (CAY / IAY / CPOE) is **not** live.
+Do not treat IAY as official intended air yards.
+
+**Filters** (tap again to reverse; default high → low): **Proj Yds · Proj FD · Comp% · IAY**.
+Only the active filter’s metric(s) sit in the center. **Proj FD** shows Floor · Proj · Ceiling.
+**Matchup %** stays on every row: `(opp_pass_YPA_allowed / lgYPA − 1) × 100`.
+
+Game line is **AWAY @ HOME · time** (never `vs`). On this NFL board only, away is green and home is red.
+
+**v1 formula**
+
+```
+E[Att]  = 0.55·Att_L3 + 0.25·Att_season + 0.20·team_pass_att
+          × script_mult(spread, total) × pace_mult
+E[YPA]  = 0.40·YPA_L5 + 0.35·YPA_season + 0.25·lgYPA
+          × opp_mult × weather_mult(1.0)
+E[Yds]  = clamp(E[Att] × E[YPA], 145–400)
+Matchup% = (opp_mult − 1) × 100
+```
+
+L3 / L5 shrink toward league when the sample is thin. CPOE bump is shrunk to **0**
+(prior 50 attempts; no NGS feed). IAY on the board is a YPA-blend depth proxy.
+Proj FD = `0.04 × pass yds + 4 × E[pass TD]` (FanDuel-style QB passing only).
+Weather multiplier is 1.0.
+
+**Sources:** ESPN public scoreboard (week + odds), depth-chart QB, gamelog attempts/YPA/Comp%/TD,
+team pass attempts / plays, opponent YPA allowed. Empty week → Retry, not invented names.
 
 ## Option 1 — Projected Starters
 
