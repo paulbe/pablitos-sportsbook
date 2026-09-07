@@ -108,7 +108,7 @@ The bundled EXAMPLE file uses the same schema.
 - Proj FD W / QS / ER terms (starters) and Floor / Ceiling counting-stat stress (batters) are local heuristics, not FanDuel official projections.
 - Daily Batters **Weather boost** uses the MLB schedule weather hydrate plus the park HR factor. It does **not** fetch Open-Meteo on that path (starters do). + is hitter-friendly.
 
-## NFL Edge — QB Projections Weekly (v0.1.23)
+## NFL Edge — QB Projections Weekly (v0.1.24)
 
 NFL-only board. Baseball home and MLB screens are not part of this path.
 
@@ -118,30 +118,34 @@ Tiles 2–4 remain Coming soon.
 **Badge:** `EXAMPLE • ESPN` — Next Gen Stats (CAY / IAY / CPOE) is **not** live.
 Do not treat IAY as official intended air yards.
 
-**Filters** (tap again to reverse; default high → low): **Proj Yds · Proj FD · Comp% · IAY**.
+**Filters** (tap again to reverse; default high → low): **Proj Yds · Proj Rush · Proj FD · Comp% · IAY**.
 Only the active filter’s metric(s) sit in the center. **Proj FD** shows Floor · Proj · Ceiling.
-**Matchup %** stays on every row: `(opp_pass_YPA_allowed / lgYPA − 1) × 100`.
+**Matchup %** stays on every row. Default (pass filters): `(opp_pass_YPA_allowed / lgYPA − 1) × 100`.
+On **Proj Rush**: `(0.75·opp_rush_YPC_mult + 0.25·opp_pass_YPA_mult − 1) × 100`.
 
 Game line is **AWAY @ HOME · time** (never `vs`). On this NFL board only, away is green and home is red.
 
 **v1 formula**
 
 ```
-E[Att]  = 0.55·Att_L3 + 0.25·Att_season + 0.20·team_pass_att
-          × script_mult(spread, total) × pace_mult
-E[YPA]  = 0.40·YPA_L5 + 0.35·YPA_season + 0.25·lgYPA
-          × opp_mult × weather_mult(1.0)
-E[Yds]  = clamp(E[Att] × E[YPA], 145–400)
-Matchup% = (opp_mult − 1) × 100
+E[Att]     = 0.55·Att_L3 + 0.25·Att_season + 0.20·team_pass_att
+             × script_mult(spread, total) × pace_mult
+E[YPA]     = 0.40·YPA_L5 + 0.35·YPA_season + 0.25·lgYPA × opp_mult
+E[Yds]     = clamp(E[Att] × E[YPA], 145–400)
+E[RushAtt] = 0.60·RushAtt_L3 + 0.25·RushAtt_season + 0.15·designed_proxy
+E[YPC]     = 0.50·YPC_L5 + 0.30·YPC_season + 0.20·lg_QB_YPC
+E[RushYds] = clamp(E[RushAtt] × E[YPC] × rush_script × opp_rush_mult, 0–120)
 ```
 
+Designed-rush proxy = team rush att/g × **0.10** (pocket) or **0.22** (dual-threat: L3 ≥ 6 or season ≥ 5.5).
+Rush script: mild bump when trailing / high total for dual-threat; cut when the team is a huge favorite (kneel risk).
 L3 / L5 shrink toward league when the sample is thin. CPOE bump is shrunk to **0**
 (prior 50 attempts; no NGS feed). IAY on the board is a YPA-blend depth proxy.
-Proj FD = `0.04 × pass yds + 4 × E[pass TD]` (FanDuel-style QB passing only).
-Weather multiplier is 1.0.
+Proj FD = `0.04 × pass yds + 4 × E[pass TD] + 0.1 × rush yds + 6 × E[rush TD]`.
+Floor / Ceiling stress both pass and rush. Weather multiplier is 1.0.
 
-**Sources:** ESPN public scoreboard (week + odds), depth-chart QB, gamelog attempts/YPA/Comp%/TD,
-team pass attempts / plays, opponent YPA allowed. Empty week → Retry, not invented names.
+**Sources:** ESPN public scoreboard (week + odds), depth-chart QB, gamelog pass/rush att/yds/TD,
+team pass/rush attempts, opponent YPA and YPC allowed. Empty week → Retry, not invented names.
 
 ## Option 1 — Projected Starters
 

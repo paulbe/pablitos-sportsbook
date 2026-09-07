@@ -126,6 +126,16 @@ class QbProjectionsRepository(
                 seasonPassTd = log.seasonTd,
                 compPctL5 = log.compPctL5,
                 oppYpaAllowed = opp.ypaAllowed,
+                rushAttL3 = log.rushAttL3,
+                rushAttL3Games = log.rushAttL3Games,
+                rushAttSeasonPerGame = log.rushAttSeasonPerGame,
+                teamRushAttPerGame = team.rushAttPerGame,
+                ypcL5 = log.ypcL5,
+                ypcL5Games = log.ypcL5Games,
+                ypcSeason = log.ypcSeason,
+                seasonRushAtt = log.seasonRushAtt,
+                seasonRushTd = log.seasonRushTd,
+                oppYpcAllowed = opp.ypcAllowed,
                 spreadForTeam = spread,
                 total = game.total,
             ),
@@ -148,8 +158,15 @@ class QbProjectionsRepository(
             compPct = result.compPct,
             iay = result.iay,
             matchupPct = result.matchupPct,
+            rushMatchupPct = result.rushMatchupPct,
+            projRushYds = result.projRushYds,
+            rushFloor = result.rushFloor,
+            rushCeiling = result.rushCeiling,
             expAtt = result.expAtt,
             expYpa = result.expYpa,
+            expRushAtt = result.expRushAtt,
+            expYpc = result.expYpc,
+            expRushTd = result.expRushTd,
             espnId = qb.id,
         )
     }
@@ -213,13 +230,17 @@ class QbProjectionsRepository(
         val pass = offense.firstOrNull { it.optString("name") == "passing" }
         val rush = offense.firstOrNull { it.optString("name") == "rushing" }
         val oppPass = opponent.firstOrNull { it.optString("name") == "passing" }
+        val oppRush = opponent.firstOrNull { it.optString("name") == "rushing" }
         val games = stat(pass, "teamGamesPlayed")?.coerceAtLeast(1f) ?: 17f
         val passAtt = stat(pass, "passingAttempts") ?: 0f
         val plays = stat(rush, "totalOffensivePlays") ?: 0f
+        val rushAtt = stat(rush, "rushingAttempts") ?: 0f
         TeamPassStats(
             passAttPerGame = if (passAtt > 0f) passAtt / games else 0f,
             playsPerGame = if (plays > 0f) plays / games else 0f,
             ypaAllowed = stat(oppPass, "yardsPerPassAttempt") ?: 0f,
+            rushAttPerGame = if (rushAtt > 0f) rushAtt / games else 0f,
+            ypcAllowed = stat(oppRush, "yardsPerRushAttempt") ?: 0f,
         )
     }
 
@@ -236,12 +257,27 @@ class QbProjectionsRepository(
         val ypaI = nameList.indexOf("yardsPerPassAttempt")
         val cmpI = nameList.indexOf("completionPct")
         val tdI = nameList.indexOf("passingTouchdowns")
+        val rushAttI = nameList.indexOf("rushingAttempts")
+        val rushYdsI = nameList.indexOf("rushingYards")
+        val ypcI = nameList.indexOf("yardsPerRushAttempt")
+        val rushTdI = nameList.indexOf("rushingTouchdowns")
         val meta = json.optObj("events")
         val regular = json.optArr("seasonTypes").toObjList()
             .firstOrNull { it.optString("displayName").contains("Regular", ignoreCase = true) }
         val rows = regular?.optArr("categories")?.toObjList()?.firstOrNull()
             ?.optArr("events")?.toObjList().orEmpty()
-        data class Start(val date: Instant, val att: Float, val ypa: Float, val cmp: Float, val yds: Float, val td: Float)
+        data class Start(
+            val date: Instant,
+            val att: Float,
+            val ypa: Float,
+            val cmp: Float,
+            val yds: Float,
+            val td: Float,
+            val rushAtt: Float,
+            val rushYds: Float,
+            val ypc: Float,
+            val rushTd: Float,
+        )
         val starts = rows.mapNotNull { row ->
             val id = row.optString("eventId")
             val stats = row.optJSONArray("stats") ?: return@mapNotNull null
@@ -252,13 +288,20 @@ class QbProjectionsRepository(
             val date = meta?.optObj(id)?.optString("gameDate")
                 ?.let { runCatching { Instant.parse(it) }.getOrNull() }
                 ?: Instant.EPOCH
-            Start(date, at(attI), at(ypaI), at(cmpI), at(ydsI), at(tdI))
+            Start(
+                date, at(attI), at(ypaI), at(cmpI), at(ydsI), at(tdI),
+                at(rushAttI), at(rushYdsI), at(ypcI), at(rushTdI),
+            )
         }.filter { it.att > 0f }.sortedByDescending { it.date }
         val last3 = starts.take(3)
         val last5 = starts.take(5)
+        val rushYpcGames = last5.filter { it.rushAtt > 0f }
         val seasonAtt = starts.sumOf { it.att.toDouble() }.toFloat()
         val seasonYds = starts.sumOf { it.yds.toDouble() }.toFloat()
         val seasonTd = starts.sumOf { it.td.toDouble() }.toInt()
+        val seasonRushAtt = starts.sumOf { it.rushAtt.toDouble() }.toFloat()
+        val seasonRushYds = starts.sumOf { it.rushYds.toDouble() }.toFloat()
+        val seasonRushTd = starts.sumOf { it.rushTd.toDouble() }.toInt()
         val games = starts.size.coerceAtLeast(1)
         QbLog(
             attL3 = if (last3.isNotEmpty()) last3.map { it.att }.average().toFloat() else 0f,
@@ -271,6 +314,14 @@ class QbProjectionsRepository(
             seasonCompPct = if (starts.isNotEmpty()) starts.map { it.cmp }.average().toFloat() else 0f,
             seasonTd = seasonTd,
             compPctL5 = if (last5.isNotEmpty()) last5.map { it.cmp }.average().toFloat() else 0f,
+            rushAttL3 = if (last3.isNotEmpty()) last3.map { it.rushAtt }.average().toFloat() else 0f,
+            rushAttL3Games = last3.size,
+            rushAttSeasonPerGame = seasonRushAtt / games,
+            ypcL5 = if (rushYpcGames.isNotEmpty()) rushYpcGames.map { it.ypc }.average().toFloat() else 0f,
+            ypcL5Games = rushYpcGames.size,
+            ypcSeason = if (seasonRushAtt > 0f) seasonRushYds / seasonRushAtt else 0f,
+            seasonRushAtt = seasonRushAtt.toInt(),
+            seasonRushTd = seasonRushTd,
         )
     }
 
@@ -321,6 +372,8 @@ class QbProjectionsRepository(
         val passAttPerGame: Float = 0f,
         val playsPerGame: Float = 0f,
         val ypaAllowed: Float = 0f,
+        val rushAttPerGame: Float = 0f,
+        val ypcAllowed: Float = 0f,
     )
 
     private data class QbLog(
@@ -334,13 +387,23 @@ class QbProjectionsRepository(
         val seasonCompPct: Float = 0f,
         val seasonTd: Int = 0,
         val compPctL5: Float = 0f,
+        val rushAttL3: Float = 0f,
+        val rushAttL3Games: Int = 0,
+        val rushAttSeasonPerGame: Float = 0f,
+        val ypcL5: Float = 0f,
+        val ypcL5Games: Int = 0,
+        val ypcSeason: Float = 0f,
+        val seasonRushAtt: Int = 0,
+        val seasonRushTd: Int = 0,
     )
 
     companion object {
         val ZONE: ZoneId = ZoneId.of("America/Los_Angeles")
         const val NOTE =
-            "Schedule, depth-chart QBs, recent attempts/YPA, team pass rate, and opponent YPA allowed come from ESPN. " +
+            "Schedule, depth-chart QBs, recent pass/rush attempts, YPA/YPC, team pass/rush rate, and opponent YPA/YPC allowed come from ESPN. " +
                 "IAY is a YPA-blend depth proxy — not Next Gen intended air yards. CPOE is shrunk to 0 (no NGS feed). " +
-                "Proj FD = 0.04×pass yds + 4×E[pass TD]. Weather multiplier is 1.0."
+                "Designed-rush proxy = team rush att × 0.10 (pocket) or 0.22 (dual-threat). " +
+                "Proj Rush matchup is 75% rush D YPC allowed + 25% pass YPA allowed. " +
+                "Proj FD = 0.04×pass yds + 4×E[pass TD] + 0.1×rush yds + 6×E[rush TD]. Weather multiplier is 1.0."
     }
 }

@@ -200,7 +200,7 @@ private fun ReadyList(state: QbUiState.Ready, viewModel: QbProjectionsViewModel)
             FilterTabRow(selected = viewModel.sortKey, onSelect = { viewModel.selectSort(it) })
             Spacer(Modifier.height(8.dp))
             Text(
-                "Matchup % = opponent pass YPA allowed vs league. IAY is a YPA-blend proxy (not NGS).",
+                "Matchup % = pass YPA allowed (Proj Rush uses 75% rush YPC allowed + 25% pass). IAY is a YPA-blend proxy (not NGS).",
                 color = TextMuted,
                 fontSize = 10.sp,
                 lineHeight = 13.sp,
@@ -242,6 +242,7 @@ private fun FilterTabRow(selected: QbSort, onSelect: (QbSort) -> Unit) {
     ) {
         listOf(
             QbSort.PROJ_YDS to "Proj Yds",
+            QbSort.PROJ_RUSH to "Proj Rush",
             QbSort.PROJ_FD to "Proj FD",
             QbSort.COMP to "Comp%",
             QbSort.IAY to "IAY",
@@ -274,9 +275,10 @@ private fun FilterTabRow(selected: QbSort, onSelect: (QbSort) -> Unit) {
 
 @Composable
 private fun QbRow(qb: QbProjection, sortKey: QbSort, displayRank: Int) {
+    val matchupPct = qb.matchupFor(sortKey)
     val matchColor = when {
-        qb.matchupPct > 0.4f -> AccentGreen
-        qb.matchupPct < -0.4f -> RegRed
+        matchupPct > 0.4f -> AccentGreen
+        matchupPct < -0.4f -> RegRed
         else -> TextMuted
     }
     val shape = RoundedCornerShape(14.dp)
@@ -330,7 +332,7 @@ private fun QbRow(qb: QbProjection, sortKey: QbSort, displayRank: Int) {
         ) {
             Text("Matchup", color = TextMuted, fontSize = 8.sp, fontWeight = FontWeight.Medium)
             Text(
-                String.format(Locale.US, "%+.0f%%", qb.matchupPct),
+                String.format(Locale.US, "%+.0f%%", matchupPct),
                 color = matchColor,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
@@ -384,6 +386,7 @@ private fun SelectedStat(qb: QbProjection, sortKey: QbSort, modifier: Modifier) 
     }
     val (label, value) = when (sortKey) {
         QbSort.PROJ_YDS -> "Proj Yds" to String.format(Locale.US, "%.0f", qb.projYds)
+        QbSort.PROJ_RUSH -> "Proj Rush" to String.format(Locale.US, "%.0f", qb.projRushYds)
         QbSort.COMP -> "Comp%" to String.format(Locale.US, "%.1f%%", qb.compPct)
         QbSort.IAY -> "IAY" to String.format(Locale.US, "%.1f", qb.iay)
         QbSort.PROJ_FD -> "Proj FD" to ""

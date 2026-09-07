@@ -83,15 +83,81 @@ class QbProjectionTest {
     }
 
     @Test
-    fun fanDuelUsesPassYardsAndPassTd() {
-        val input = baseInputs(seasonAtt = 400, seasonPassTd = 32)
+    fun fanDuelIncludesPassAndRush() {
+        val input = baseInputs(
+            seasonAtt = 400,
+            seasonPassTd = 32,
+            rushAttL3 = 8f,
+            rushAttL3Games = 3,
+            rushAttSeasonPerGame = 7f,
+            seasonRushAtt = 110,
+            seasonRushTd = 7,
+            ypcL5 = 6.2f,
+            ypcL5Games = 5,
+            ypcSeason = 5.8f,
+        )
         val result = QbProjectionCalculator.project(input)
         val expectedTd = (32f / 400f * result.expAtt).coerceIn(0.4f, 3.6f)
-        val expectedFd = result.projYds * 0.04f + expectedTd * 4f
+        val expectedRushTd = (7f / 110f * result.expRushAtt).coerceIn(0.02f, 1.4f)
+        val expectedFd = result.projYds * 0.04f + expectedTd * 4f +
+            result.projRushYds * 0.1f + expectedRushTd * 6f
         assertEquals(expectedTd, result.expPassTd, 0.02f)
-        assertEquals(expectedFd, result.fdProj, 0.05f)
+        assertEquals(expectedRushTd, result.expRushTd, 0.02f)
+        assertEquals(expectedFd, result.fdProj, 0.08f)
         assertTrue(result.fdFloor < result.fdProj)
         assertTrue(result.fdCeiling > result.fdProj)
+        assertTrue(result.projRushYds > 20f)
+    }
+
+    @Test
+    fun rushAttBlendsL3SeasonAndDesignedProxy() {
+        val input = baseInputs(
+            rushAttL3 = 10f,
+            rushAttL3Games = 3,
+            rushAttSeasonPerGame = 8f,
+            teamRushAttPerGame = 28f,
+            ypcL5 = 5.5f,
+            ypcL5Games = 5,
+            ypcSeason = 5.4f,
+            spreadForTeam = 0f,
+            total = 44.5f,
+            oppYpcAllowed = QbProjectionCalculator.LEAGUE_RUSH_YPC,
+        )
+        val result = QbProjectionCalculator.project(input)
+        val l3s = QbProjectionCalculator.shrink(10f, 3f, 4.2f, 2f)
+        val designed = QbProjectionCalculator.designedRushProxy(10f, 8f, 28f)
+        val expAtt = (0.60f * l3s + 0.25f * 8f + 0.15f * designed).coerceIn(1.2f, 16f)
+        assertEquals(expAtt, result.expRushAtt, 0.05f)
+        val expYpc = (0.50f * QbProjectionCalculator.shrink(5.5f, 5f, 5.4f, 3f) + 0.30f * 5.4f + 0.20f * 5.4f)
+            .coerceIn(3.2f, 8.5f)
+        assertEquals(expYpc, result.expYpc, 0.05f)
+        assertEquals((expAtt * expYpc).coerceIn(0f, 120f), result.projRushYds, 0.4f)
+    }
+
+    @Test
+    fun rushScriptCutsHugeLeadsAndBumpsTrailingDualThreat() {
+        val trail = QbProjectionCalculator.rushScriptMult(7f, 50f, dualThreat = true)
+        val kneel = QbProjectionCalculator.rushScriptMult(-14f, 40f, dualThreat = true)
+        val pocket = QbProjectionCalculator.rushScriptMult(0f, 44.5f, dualThreat = false)
+        assertTrue(trail > 1f)
+        assertTrue(kneel < 1f)
+        assertEquals(1f, pocket, 0.001f)
+        assertEquals(0.85f, QbProjectionCalculator.rushScriptMult(-20f, 30f, true), 0.001f)
+    }
+
+    @Test
+    fun rushMatchupBlendsRushDWithPassD() {
+        val input = baseInputs(
+            oppYpaAllowed = QbProjectionCalculator.LEAGUE_YPA,
+            oppYpcAllowed = QbProjectionCalculator.LEAGUE_RUSH_YPC * 1.12f,
+        )
+        val result = QbProjectionCalculator.project(input)
+        val blended = 0.75f * result.rushOppMult + 0.25f * result.oppMult
+        assertEquals((blended - 1f) * 100f, result.rushMatchupPct, 0.05f)
+        assertTrue(result.rushMatchupPct > result.matchupPct)
+        val sample = sampleQb("X", 200f, 20f, 12f, 64f, 7f, rushMatchup = 9f, passMatchup = 1f)
+        assertEquals(9f, sample.matchupFor(QbSort.PROJ_RUSH), 0.01f)
+        assertEquals(1f, sample.matchupFor(QbSort.PROJ_YDS), 0.01f)
     }
 
     @Test
@@ -107,11 +173,12 @@ class QbProjectionTest {
     @Test
     fun sortHighToLowByActiveMetric() {
         val rows = listOf(
-            sampleQb("Low", projYds = 180f, fdProj = 10f, compPct = 58f, iay = 6.2f),
-            sampleQb("High", projYds = 280f, fdProj = 22f, compPct = 71f, iay = 8.4f),
-            sampleQb("Mid", projYds = 220f, fdProj = 15f, compPct = 64f, iay = 7.1f),
+            sampleQb("Low", projYds = 180f, fdProj = 10f, projRushYds = 12f, compPct = 58f, iay = 6.2f),
+            sampleQb("High", projYds = 280f, fdProj = 22f, projRushYds = 48f, compPct = 71f, iay = 8.4f),
+            sampleQb("Mid", projYds = 220f, fdProj = 15f, projRushYds = 28f, compPct = 64f, iay = 7.1f),
         )
         assertEquals(listOf("High", "Mid", "Low"), QbSorter.sort(rows, QbSort.PROJ_YDS, false).map { it.name })
+        assertEquals(listOf("High", "Mid", "Low"), QbSorter.sort(rows, QbSort.PROJ_RUSH, false).map { it.name })
         assertEquals(listOf("High", "Mid", "Low"), QbSorter.sort(rows, QbSort.PROJ_FD, false).map { it.name })
         assertEquals(listOf("High", "Mid", "Low"), QbSorter.sort(rows, QbSort.COMP, false).map { it.name })
         assertEquals(listOf("High", "Mid", "Low"), QbSorter.sort(rows, QbSort.IAY, false).map { it.name })
@@ -138,6 +205,16 @@ class QbProjectionTest {
         seasonPassTd: Int = 24,
         compPctL5: Float = 65f,
         oppYpaAllowed: Float = 7.05f,
+        rushAttL3: Float = 3.5f,
+        rushAttL3Games: Int = 3,
+        rushAttSeasonPerGame: Float = 3.8f,
+        teamRushAttPerGame: Float = 26f,
+        ypcL5: Float = 5.1f,
+        ypcL5Games: Int = 5,
+        ypcSeason: Float = 5.0f,
+        seasonRushAtt: Int = 60,
+        seasonRushTd: Int = 2,
+        oppYpcAllowed: Float = 4.35f,
         spreadForTeam: Float? = 0f,
         total: Float? = 44.5f,
     ) = QbInputs(
@@ -154,6 +231,16 @@ class QbProjectionTest {
         seasonPassTd = seasonPassTd,
         compPctL5 = compPctL5,
         oppYpaAllowed = oppYpaAllowed,
+        rushAttL3 = rushAttL3,
+        rushAttL3Games = rushAttL3Games,
+        rushAttSeasonPerGame = rushAttSeasonPerGame,
+        teamRushAttPerGame = teamRushAttPerGame,
+        ypcL5 = ypcL5,
+        ypcL5Games = ypcL5Games,
+        ypcSeason = ypcSeason,
+        seasonRushAtt = seasonRushAtt,
+        seasonRushTd = seasonRushTd,
+        oppYpcAllowed = oppYpcAllowed,
         spreadForTeam = spreadForTeam,
         total = total,
     )
@@ -162,8 +249,11 @@ class QbProjectionTest {
         name: String,
         projYds: Float,
         fdProj: Float,
+        projRushYds: Float = 20f,
         compPct: Float,
         iay: Float,
+        rushMatchup: Float = 4f,
+        passMatchup: Float = 4f,
     ) = QbProjection(
         rank = 1,
         name = name,
@@ -181,9 +271,16 @@ class QbProjectionTest {
         fdCeiling = fdProj + 3f,
         compPct = compPct,
         iay = iay,
-        matchupPct = 4f,
+        matchupPct = passMatchup,
+        rushMatchupPct = rushMatchup,
+        projRushYds = projRushYds,
+        rushFloor = projRushYds * 0.5f,
+        rushCeiling = projRushYds * 1.65f,
         expAtt = 34f,
         expYpa = 7.2f,
+        expRushAtt = 6f,
+        expYpc = 5.4f,
+        expRushTd = 0.2f,
         espnId = name,
     )
 }
